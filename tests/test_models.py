@@ -3,7 +3,7 @@
 import pytest
 from pydantic import ValidationError
 
-from app.models.schemas import EvaluationResult, Observation, Plan, Task
+from app.models.schemas import Observation, Plan, Task
 
 
 def make_task(**overrides):

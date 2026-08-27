@@ -1,5 +1,8 @@
-from typing import Literal,get_args,Any
+import operator
+from typing import Annotated, Any, Literal, get_args
+
 from pydantic import BaseModel
+from typing_extensions import TypedDict
 
 # 工具名白名单：整个项目允许存在的全部工具，一个都不能多
 ToolName = Literal[
@@ -45,5 +48,22 @@ class EvaluationResult(BaseModel):
 
 class Plan(BaseModel):
     """一次规划产出的完整任务清单"""
-    reasoning: str
-    tasks: list[Task]
+    reasoning: str                      # 为什么这么规划，方便 debug 和演示
+    tasks: list[Task]                   #任务数量约定 3~8 个，超界由调用方截断
+
+class AgentState(TypedDict):
+    """整张图共享的白板：所有节点的输入输出都长这样"""
+    run_id: str                                   # 本次运行的身份证号，Checkpoint 用它找回现场
+    user_goal: str                                # 用户原始目标，原样保存，后续节点随时回看
+    adaptive: bool                                # True=自适应重规划；False=固定计划对照组（W5 用）
+    plan: list[Task]                              # 当前任务清单，重规划时会被改写
+    current_task: int                             # 下一个要执行的任务下标
+    retry_count: int                              # 当前任务的重试次数
+    replan_count: int                             # 已重规划次数
+    observations: Annotated[list[Observation], operator.add]   # 节点各存各的，框架自动合并
+    evaluation: EvaluationResult | None           # 最近一次评估结论
+    pending_approval: Task | None                 # 等待人工审批的高危任务
+    final_answer: str                             # 最终答案
+    status: Literal[
+        "planning", "executing", "evaluating", "waiting_human", "done", "failed"
+    ]

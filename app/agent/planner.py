@@ -1,8 +1,9 @@
 """Planner —— 把用户目标翻译成结构化任务清单"""
 
-from app.agent.llm import make_llm
-from app.models.schemas import Plan, TOOL_NAMES
 from pydantic import ValidationError
+
+from app.agent.llm import make_llm
+from app.models.schemas import TOOL_NAMES, Plan
 
 PLANNER_PROMPT = """
 你是一名资深技术架构师，擅长把模糊目标拆成可执行的调研步骤。
