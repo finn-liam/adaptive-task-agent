@@ -3,7 +3,8 @@
 from pydantic import ValidationError
 
 from app.agent.llm import make_llm
-from app.models.schemas import TOOL_NAMES, Plan
+from app.models.schemas import Plan
+from app.tools.registry import TOOL_REGISTRY
 
 PLANNER_PROMPT = """
 你是一名资深技术架构师，擅长把模糊目标拆成可执行的调研步骤。
@@ -27,7 +28,7 @@ def make_planner(max_attempts: int = 3):
     def planner(goal: str) -> Plan:
         base_prompt = (
             PLANNER_PROMPT
-            .replace("{tools}", ", ".join(TOOL_NAMES))
+            .replace("{tools}", ", ".join(TOOL_REGISTRY))
             .replace("{goal}", goal)
         )
         prompt = base_prompt
