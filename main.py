@@ -18,10 +18,15 @@ def main():
 
     print("任务清单")
     for t in result["plan"]:
-        print(f"{t.id}状态={t.status} 工具={t.tool}")
-        print(f"{t.description}")
+        print(f"[{t.id}] {t.status} | {t.tool} | {t.description}")
 
-    print(f"\n运行状态:{result['status']}")
+    print(rf"\执行回执:{result['status']}")
+    for o in result["observations"]:
+        mark = "√" if o.success else "X"
+        print(f"  {mark} [{o.task_id}] {o.tool}：{o.error or o.summary[:80]}")
+    print("\n========== 最终答案 ==========")
+    print(result["final_answer"])
+    print(f"\n（运行状态：{result['status']}）")
 
 if __name__ == "__main__":
     main()

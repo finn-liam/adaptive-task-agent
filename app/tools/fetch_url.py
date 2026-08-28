@@ -17,8 +17,9 @@ def fetch_url(url: str) -> str:
 
     if resp.status_code != 200:
         raise RuntimeError(f"HTTP {resp.status_code}: {url}")
-    if not resp.headers.get("content-type", "").startswith("text/html"):
-        raise RuntimeError(f"只支持网页，拒绝该类型：{resp.headers.get('content-type')}")
+    ctype = resp.headers.get("content-type", "")
+    if not ctype.startswith(("text/html", "text/plain")):
+        raise RuntimeError(f"只支持网页/纯文本，拒绝该类型：{ctype}")
 
     soup = BeautifulSoup(resp.text, "lxml")
 
