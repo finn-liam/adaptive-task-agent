@@ -14,8 +14,11 @@ ToolName = Literal[
     "save_memory",
     "execute_python",
 ]
+# 输出为：typing.Literal['search_web', 'fetch_url', 'search_github', 'read_file', 'search_knowledge', 'save_memory', 'execute_python']
+
 # 反推出纯字符串元组，后面的注册表和 Prompt 都会复用它
 TOOL_NAMES = get_args(ToolName)
+# 输出为：('search_web', 'fetch_url', 'search_github', 'read_file', 'search_knowledge', 'save_memory', 'execute_python')
 
 class Task(BaseModel):
     """Agent计划中的单个任务"""
