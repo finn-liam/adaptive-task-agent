@@ -7,13 +7,16 @@ from app.agent.graph import build_graph
 def main():
     parser = argparse.ArgumentParser(description="Adaptive Task Planning Agent")
     parser.add_argument("goal",help="要完成的复杂技术任务")
+    parser.add_argument("--fixed", action="store_true",
+                        help="使用固定计划模式（不做重规划），W5 对照组用")
     args = parser.parse_args()
 
-    print(f"目标:{args.goal}\n")
+    print(f"目标:{args.goal}（模式：{'固定' if args.fixed else '自适应'}）\n")
 
     result = build_graph().invoke({
         "run_id": uuid.uuid4().hex[:8],
         "user_goal": args.goal,
+        "adaptive": not args.fixed,
     })
 
     print("任务清单")
