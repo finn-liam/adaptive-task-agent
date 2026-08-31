@@ -11,7 +11,10 @@ def executor_node(state: AgentState) -> dict:
     task = plan[idx]                #planner返回值为[Task(……),Task(……)]，详细示例见planner文件。
 
     print(f"{task.id} {task.description}")
-
+    if task.tool == "execute_python" and state.get("pending_approval") is None:
+        print(f"{task.id}是高危任务，等待人工审批")
+        return {"pending_approval":task}
+    
     not_ready = [
         d for d in task.depends_on
         if next(t for t in plan if t.id == d).status != "completed"

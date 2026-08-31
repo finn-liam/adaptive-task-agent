@@ -14,6 +14,7 @@ from langgraph.graph import END, START, StateGraph
 from app.agent.evaluator import evaluator_node
 from app.agent.executor import executor_node
 from app.agent.final_answer import final_answer_node
+from app.agent.human_gate import human_gate_node
 from app.agent.planner import make_planner
 from app.agent.replanner import replanner_node
 from app.models.schemas import AgentState
@@ -39,16 +40,25 @@ def build_graph(checkpointer=None):
             return "final"       # 指针到头，全部完成
         return "next"            # 通过→下一个；失败不重规划→跳过继续
 
+    def route_after_execute(state: AgentState) -> str:
+        return "gate" if state.get("pending_approval") is not None else "evaluator"
+
     g.add_node("planner", planner_node)
     g.add_node("executor", executor_node)
     g.add_node("evaluator", evaluator_node)
     g.add_node("replanner", replanner_node)
     g.add_node("final_answer", final_answer_node)
+    g.add_node("human_gate",human_gate_node)
 
     # 边的登记表：代码书写顺序与执行顺序无关（登记规则，不是播放列表）
     g.add_edge(START, "planner")
     g.add_edge("planner", "executor")
-    g.add_edge("executor", "evaluator")          # 每个任务干完必过质检
+    g.add_conditional_edges(
+        "executor",
+        route_after_execute,
+        {"gate":"human_gate","evaluator": "evaluator"}
+    )
+    g.add_edge("human_gate","evaluator")
     g.add_edge("replanner", "executor")          # 改完计划必然回去继续干活
     g.add_conditional_edges(                     # evaluator 出口三岔：路由现场选
         "evaluator",

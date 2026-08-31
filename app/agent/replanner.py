@@ -1,4 +1,5 @@
 """replanner：根据评估缺口增量修改计划（三条约束见 plan.md §5）"""
+from pydantic import ValidationError
 
 from app.agent.llm import make_llm
 from app.models.schemas import AgentState, Plan
@@ -22,6 +23,12 @@ REPLAN_PROMPT = """你是重规划专家，一个执行中的计划遇到了信�
 7. 系统没有任何工具能"处理上一步抓到的内容"：提取、总结、筛选类需求一律不要建任务
    （最终答复环节会自动完成）；tool_args 必须是具体参数（完整 URL、文件路径、搜索关键词），
    只规划"获取信息"类任务。
+8. 各工具的 tool_args 必须逐字使用这些参数名：
+   search_web → {"query": "关键词"}；fetch_url → {"url": "完整网址"}；
+   search_github → {"action": "search", "query": "关键词"} 或 {"action": "readme", "repo": "owner/仓库名"}；
+   read_file → {"path": "项目内相对路径"}；
+   execute_python → {"code": "单个纯算术表达式"}——禁止赋值、print、多行。
+9. 修改已有任务时，tool_args 必须原样保留或给出完整新值——绝不允许丢掉参数只留描述。
 """
 
 def replanner_node(state: AgentState) -> dict:
@@ -38,8 +45,21 @@ def replanner_node(state: AgentState) -> dict:
                 .replace("{missing}", ev.missing_info or ev.reason)
     )
 
-    new_plan : Plan = make_llm().with_structured_output(
-        Plan,method="function_calling").invoke(prompt)
+    base_prompt = prompt
+    new_plan = None
+    for attempt in range(1, 4):
+        try:
+            new_plan = make_llm().with_structured_output(
+                Plan, method="function_calling").invoke(prompt)
+            break
+        except ValidationError as e:
+            prompt = base_prompt + (
+                "\n\n你上一次的输出未通过校验，错误如下：\n"
+                f"{e}\n请修正后重新输出完整、合法的任务计划。"
+                '注意：所有任务的 id 必须是字符串（如 "1"），不能是数字。'
+            )
+    if new_plan is None:
+        raise RuntimeError("重规划连续 3 次产出非法计划")
 # Plan(reasoning='缺口是教程内容。改用中文关键词重搜',
 #      tasks=[task1, task2, task3(改写query), task4(新增)])
 

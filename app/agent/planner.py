@@ -18,6 +18,13 @@ PLANNER_PROMPT = """
 5. 系统没有任何工具能"处理上一步抓到的内容"：提取、总结、筛选类需求一律不要建任务
    （最终答复环节会自动完成）；tool_args 必须是具体参数（完整 URL、文件路径、搜索关键词），
    只规划"获取信息"类任务。
+6. 各工具的 tool_args 必须逐字使用这些参数名：
+    search_web → {"query": "关键词"}
+    fetch_url → {"url": "完整网址"}
+    search_github → {"action": "search", "query": "关键词"}（拉取 README 时用 {"action": "readme", "repo": "owner/仓库名"}）
+    read_file → {"path": "项目内相对路径"}
+    execute_python → {"code": "单个纯算术表达式"}——只许一个表达式，
+    禁止赋值语句、禁止 print、禁止多行；它只能算数，不能搜索或读文件。
 
 用户目标：{goal}
 """

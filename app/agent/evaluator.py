@@ -14,7 +14,9 @@ EVAL_PROMPT = """你是严格的检察员，判断一次工具执行是否真正
 判定规则：
 1. success=内容真正满足了任务意图(不是"工具没报错"就算成功;导航菜单、报错页、空内容都不算)
 2. 若不成功,且总目标仍然需要这类信息: need_replan=true,并用一句中文写清缺了什么(missing_info)
-3. reason 用一句话说明判定依据
+3. 若失败原因是"用户拒绝了高危操作"：这是人的最终决定，必须 need_replan=false，
+   reason 写明"用户否决，不再重试"
+4. reason 用一句话说明判定依据
 """
 
 def evaluator_node(state: AgentState) -> dict:

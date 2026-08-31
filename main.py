@@ -8,9 +8,23 @@ W4-2 新增：
 import argparse
 import uuid
 
+from langgraph.types import Command
+
 from app.agent.graph import build_graph
 
 
+def run_graph(payload,config):
+    """带审批循环的发车器：图暂停 → 问人 → Command(resume) 回注 → 直到跑完"""
+    while True:
+        result = build_graph().invoke(payload,config)
+        if not result.get("__interrupt__"):
+            return result
+        task = result["pending_approval"]
+        print("\n 高危操作等待审批")
+        print(f"   任务：{task.description}")
+        print(f"   代码：{(task.tool_args or {}).get('code', '(见任务描述)')}")
+        ans = input("允许执行？[y/n] >").strip().lower()
+        payload = Command(resume = {"approval":ans == "y"})
 def main():
     parser = argparse.ArgumentParser(description="Adaptive Task Planning Agent")
     parser.add_argument("goal", nargs="?", default="",
@@ -27,7 +41,7 @@ def main():
         # LangGraph 查到该 thread 的最近快照，从断掉的节点继续（节点级"至少一次"语义）
         run_id = args.resume
         print(f"🔄 恢复 run {run_id}……\n")
-        result = build_graph().invoke(None, {"configurable": {"thread_id": run_id}})
+        result = run_graph(None, {"configurable": {"thread_id": run_id}})
     else:
         # —— 新车路线 ——
         if not args.goal:
@@ -49,9 +63,7 @@ def main():
             "final_answer": "",
             "status": "planning",
         }
-        # config 里的 thread_id 就是快照的"档案柜编号"，两种路线都必须携带
-        result = build_graph().invoke(initial_state,
-                                      {"configurable": {"thread_id": run_id}})
+        result = run_graph(initial_state, {"configurable": {"thread_id": run_id}})
 
     print("任务清单")
     for t in result["plan"]:
