@@ -32,3 +32,20 @@ def evaluator_node(state: AgentState) -> dict:
     mark = "√√√ 通过" if result.success else ("循环 建议重规划" if result.need_replan else "X 失败跳过")
     print(f"🔍 [{task.id}]{mark} | {result.reason}")
     return {"evaluation":result}
+
+
+# result = EvaluationResult(
+#     success=True,                          # 内容真满足了任务意图
+#     reason='搜索结果第一条就是 langchain-ai/langgraph，仓库名与 URL 明确，满足意图',
+#     need_replan=False,                     # 不需要改计划
+#     missing_info=None,                     # 无缺口
+# )
+# 节点返回：{"evaluation": 上面的对象} → 白板 evaluation 格子被覆盖为这份
+
+# result = EvaluationResult(
+#     success=False,
+#     reason='工具执行报错（TypeError: read_file() missing path），未获取到任何内容',
+#     need_replan=True,                      # 且总目标仍需要这个信息
+#     missing_info='LangGraph Checkpoint 持久化的正文内容',
+# )
+# # missing_info 的去向：下一站 replanner 用 .replace("{missing}", ev.missing_info) 拼进 prompt

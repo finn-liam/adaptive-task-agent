@@ -24,17 +24,25 @@ class Task(BaseModel):
     """Agent计划中的单个任务"""
     id: str                             #"t1","t2"...；重规划插入的新任务延续编号
     description: str                    #要干什么的自然语言描述
-    tool: ToolName | None               #用哪个工具执行；V1约定不允许为None
+    tool: ToolName | None               #用哪个工具执行；V1约定不允许为None，防止llm幻觉名，用Literal锁
     tool_args: dict[str, Any] |None = None          #调用工具的参数
     depends_on: list[str] = []                      #必须等这些任务完成了，本任务才开始
-    status: Literal["pending","running","completed","failed"] = "pending"
+    status: Literal["pending","running","completed","failed"] = "pending"   #待处理，运行中，已完成，失败
+
+# tool_args 的示例输出：
+# fetch_url 任务
+# tool_args = {"url": "https://www.runoob.com/ai-agent/langgraph-quick-start.html"}
+# # search_web 任务
+# tool_args = {"query": "LangGraph Checkpoint 持久化机制"}
+# # search_github 任务
+# tool_args = {"action": "search", "query": "langgraph"}
 
 class Observation(BaseModel):
     """一次工具执行的记录"""
     task_id: str                    #观察属于哪个任务
     tool: ToolName                  #实际用了哪个工具
     success: bool                   #是否执行成功
-    summary: str                    #截断后给LLM看的内容
+    summary: str                    #截断后给LLM看的内容。在base中。输出为： 头 1200 字符 + 省略标记 + 尾 400 字符：
     source_url: str | None = None   #信息来源链接,最终回答要附引用
     raw_ref: str | None = None      #原始全文落盘的路径
     error: str | None = None        #失败的原因

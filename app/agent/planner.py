@@ -25,7 +25,9 @@ PLANNER_PROMPT = """
 
 def make_planner(max_attempts: int = 3):
     """返回一个 goal -> Plan 的规划函数"""
+    # 造实例
     llm = make_llm()
+    # 逼模型按照Plan填表的新对象
     structured_llm = llm.with_structured_output(Plan,method="function_calling")
 
     def planner(goal: str) -> Plan:
@@ -38,8 +40,10 @@ def make_planner(max_attempts: int = 3):
 
         for attempt in range(1,max_attempts + 1):
             try:
+                # LLM回传JSON，交给 Plan.model_validate->schema.py质检，合格得到Plan对象（-> plan）。
                 return structured_llm.invoke(prompt)
             except ValidationError as e:
+                # 主要是规范工具的调用，让每次工具的调用都能在给的范围中调用。
                 prompt = base_prompt + (
                     "\n\n你上一次的输出未通过校验，错误如下：\n"
                     f"{e}\n"
@@ -48,3 +52,47 @@ def make_planner(max_attempts: int = 3):
                 
         raise RuntimeError(f"连续{max_attempts}次产出非法计划，放弃治疗")
     return planner
+
+# llm返回的内容
+# {
+#   "reasoning": "用户目标是搜索 langgraph 仓库并阅读 README。先搜索定位仓库，再抓取其主页提取信息。所以拆成两步，前序产出供后续使用。",
+#   "tasks": [
+#     {
+#       "id": "task1",
+#       "description": "用 search_github 搜索 langgraph 仓库，获取其完整 URL 和基本信息",
+#       "tool": "search_github",
+#       "tool_args": {"action": "search", "query": "langgraph"},
+#       "depends_on": [],
+#       "status": "pending"
+#     },
+#     {
+#       "id": "task2",
+#       "description": "抓取 langgraph 仓库主页，提取仓库描述和 README 正文",
+#       "tool": "fetch_url",
+#       "tool_args": {"url": "https://github.com/langchain-ai/langgraph"},
+#       "depends_on": ["task1"],
+#       "status": "pending"
+#     }
+#   ]
+# }
+
+
+
+# 返回的planner示例为：
+# Plan(
+    # reasoning='用户目标分为三步：搜索仓库、阅读 README、找教程。按顺序拆解，前序产出供后续使用。',
+    # tasks=[
+    #     Task(id='task1', description='用 search_github 搜索 langgraph 仓库，获取完整 URL',
+    #          tool='search_github',
+    #          tool_args={'action': 'search', 'query': 'langgraph'},
+    #          depends_on=[],
+    #          status='pending'),
+    #     Task(id='task2', description='抓取 langgraph 仓库主页，提取元信息',
+    #          tool='fetch_url',
+    #          tool_args={'url': 'https://github.com/langchain-ai/langgraph'},
+    #          depends_on=[],
+    #          status='pending'),
+    #     ...
+    # ],
+# )
+

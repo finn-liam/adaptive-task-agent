@@ -30,7 +30,7 @@ def replanner_node(state: AgentState) -> dict:
     for t in plan:
         mark = {"completed": "√","failed":"X"}.get(t.status, "o")
         lines.append(f"{mark} {t.id} ({t.tool}): {t.description}")
-    ev = state["evaluation"]
+    ev = state["evaluation"]        #看evaluator.py中失败的返回值
     prompt = (REPLAN_PROMPT
                 .replace("{goal}",state["user_goal"])
                 .replace("{plan_view}", "\n".join(lines))
@@ -40,6 +40,8 @@ def replanner_node(state: AgentState) -> dict:
 
     new_plan : Plan = make_llm().with_structured_output(
         Plan,method="function_calling").invoke(prompt)
+# Plan(reasoning='缺口是教程内容。改用中文关键词重搜',
+#      tasks=[task1, task2, task3(改写query), task4(新增)])
 
     old_status = {t.id: t.status for t in plan}
     for t in new_plan.tasks:
@@ -47,7 +49,7 @@ def replanner_node(state: AgentState) -> dict:
             t.status = "completed"
         else:
             t.status = "pending"        # 其余（失败/新增/被改的）一律重置为待执行
-
+# 增加新任务。
     added = [t.id for t in new_plan.tasks if t.id not in old_status]
 
     print(f"\n🛠️  第{state["replan_count"]+1}次重规划 | 新增{added or "无"} | {new_plan.reasoning[:60]}")
@@ -56,6 +58,7 @@ def replanner_node(state: AgentState) -> dict:
         (i for i, t in enumerate(new_plan.tasks) if t.status == "pending"),
         None,
     )
+    #  若 pending_idx 是 None（极端：LLM 全标 completed）→ 兜底：重置刚失败的
     if pending_idx is None:
         # 极端兜底：计划里居然没有待执行任务 → 强制重置刚失败的那个
         failed_id = state["observations"][-1].task_id
