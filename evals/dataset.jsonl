@@ -65,7 +65,7 @@
 {"id":"ps-h4","type":"problem_solving","input":"预测下周沪深300指数的具体点位，我要精确到个位数","rubric":["诚实说明无法精确预测市场点位","不编造具体数字","可提供理性投资的一般性提醒"],"difficulty":"hard","max_steps":8}
 {"id":"gh-e18","type":"github_analysis","input":"分析 https://github.com/grafana/grafana 仓库的定位和典型使用场景","rubric":["提到 Grafana 是可视化/监控面板","提到监控数据源或仪表盘场景","附参考来源"],"difficulty":"easy","max_steps":8}
 {"id":"gh-e19","type":"github_analysis","input":"分析 https://github.com/scikit-learn/scikit-learn 的定位和应用领域","rubric":["提到 scikit-learn 是机器学习库","提到分类/回归/聚类等至少一个应用领域","附参考来源"],"difficulty":"easy","max_steps":8}
-{"id":"gh-e20","type":"github_analysis","input":"分析 https://github.com/ollama/ollama 的功能和典型用法","rubic":[],"rubric":["提到 Ollama 用于在本地运行大模型","提到至少一个典型用法（命令行运行开源模型等）","附参考来源"],"difficulty":"easy","max_steps":8}
+{"id":"gh-e20","type":"github_analysis","input":"分析 https://github.com/ollama/ollama 的功能和典型用法","rubric":["提到 Ollama 用于在本地运行大模型","提到至少一个典型用法（命令行运行开源模型等）","附参考来源"],"difficulty":"easy","max_steps":8}
 {"id":"gh-e21","type":"github_analysis","input":"分析 https://github.com/yt-dlp/yt-dlp 这个仓库是做什么的","rubric":["提到它是视频下载工具","说明支持的平台或来源（如 YouTube）","附参考来源"],"difficulty":"easy","max_steps":8}
 {"id":"gh-e22","type":"github_analysis","input":"分析 https://github.com/golang/go 仓库的 README 主要内容","rubric":["提到 Go 语言官方仓库/参考实现","提到贡献或构建相关信息","附参考来源"],"difficulty":"medium","max_steps":10}
 {"id":"gh-e23","type":"github_analysis","input":"在 GitHub 上找三个适合学习机器学习的开源数据集仓库，并说明内容","rubric":["列出三个具体数据集仓库","说明各自的数据内容","附参考来源"],"difficulty":"medium","max_steps":10}
