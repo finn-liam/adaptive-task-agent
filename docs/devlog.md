@@ -197,4 +197,59 @@ Fixed 的问题不是执行不行，是计划一开始就没铺够，而且中�
 
 合卷把这 4 条复述一遍，全过才开 W4。
 
+# W4 —— 鲁棒性周：从"正常能跑"到"出事也不怕"
+
+## 本周加了什么（对着 W3 的增量）
+
+四个机制，每个都对应一种"出事"：
+- **Retry（base.py）**：工具调用失败且属瞬时故障（超时/429/5xx）→ 指数退避 1s/2s 重试 ≤2 次；
+  404 这类永久故障不重试。
+- **Checkpoint（graph.py + main.py）**：编译图时挂 SqliteSaver，每个节点跑完自动把白板
+  快照存进 checkpoints.sqlite；进程死了用 --resume run_id 凭快照复活，从断掉的节点继续。
+- **HITL（execute_python + human_gate）**：高危工具不让 executor 自动执行——登记
+  pending_approval → 闸门节点 interrupt() 冻结全图 → CLI 问人 → Command(resume) 回注。
+- **Memory（store.py）**：save_memory 写 SQLite（UNIQUE 去重），search_knowledge 用
+  BM25+jieba 检索自己的 6 篇笔记。长期记忆让 Agent 从"每次归零的计算器"变成"越用越懂你"。
+
+## 本周的坑（每个都是亲手踩的）
+
+1. **悲观初值**：重试循环里 success 沿用了旧版初值 True，结果产出"带错误信息的成功回执"
+   （success=True 但 error=404）。教训：循环重试必须默认悲观——没成功过就是没成功。
+2. **checkpoint 序列化边界**：每两个节点之间有"序列化→存档→反序列化"，plan 和
+   pending_approval 里的同名任务变成两份独立拷贝。在闸门里改 pending_approval 的状态，
+   plan 里那份纹丝不动，最终任务清单显示已成功的任务是 pending。修法：按 id 找到
+   plan 列表里那一份来改。教训：跨节点的对象引用不可信。
+3. **孪生路由名**：route_after_eval / route_after_execute，给 executor 挂条件边时
+   递错了函数——评估还没跑就去读 evaluation（None）直接崩。同族事故第三次
+   （plam、task.id、pending_aproval 少个 p）。土办法：键名从 schemas.py 复制粘贴，不手打。
+4. **人的否决是终审**：拒绝高危操作后，失败任务被重置 pending → 再审批 → 再拒绝……
+   重规划连插三个新任务形成审批循环。修法：evaluator 加规则"失败原因是用户拒绝 →
+   不再重试"。设计原则：否则 HITL 从保护机制退化成橡皮图章。
+5. **中文检索的停用词**：搜"量子纠缠"返回了 3.0 的假相关——jieba 把查询切成词后，
+   "的/完全/无关"这些词在笔记里到处都是，堆出了假分数。修法：停用词表 + 过滤单字，
+   让"相关度"变诚实。BM25Okapi 对出现在半数以上文档的词会算出负 IDF，也是个冷知识。
+6. 小怪合集：DTZ005（datetime.now() 不带时区，用 astimezone() 补）；
+   PowerShell 的 \" 转义会切断 python -c 字符串（内部用单引号，嵌套用 chr() 拼）。
+
+## 面试问答演练
+
+问：断点恢复是怎么工作的？
+答：compile 时挂 SqliteSaver，每个节点（super-step）跑完自动把完整白板 + 导航位置
+按 thread_id 写进 SQLite。进程死了，用同一 thread_id 调 invoke(None)——None 的意思
+是"不给新输入，看档案"——框架取最新快照、反序列化还原白板、从断掉的节点重入。
+恢复粒度是节点级"至少一次"：死在节点中间的会重跑（我们真实遇到过：评估员死在
+调 DeepSeek 半路，恢复后它重新评估了一次），已完成的节点绝不重跑。
+快照我见过实物：checkpoints.sqlite 里躺着 11 次 run 共 137 份快照。
+
+问：用户拒绝了高危操作，Agent 该怎么办？
+答：把拒绝当终审。第一次实现时它会重置任务再问一次，形成审批循环——
+后来在评估器里加了规则：失败原因是用户拒绝 → 不再重试。HITL 的目的是给人
+控制权，反复骚扰人的审批是失败的设计。
+
+问：为什么记忆用 SQLite 表 + BM25，不用向量库？
+答：范围控制。BM25 零基础设施、结果可解释；已知代价是纯字面匹配——搜"断点续传"
+搜不到讲 checkpoint 的笔记（语义相同字面不同），这正是向量检索要解决的问题，
+留给项目二（RAG）正面回答。
+
+
 
