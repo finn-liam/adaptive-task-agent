@@ -8,219 +8,227 @@
 :root {
   --bg: #ffffff; --bg2: #f7f7f8; --line: #e5e5e5; --text: #1a1a1a;
   --muted: #8e8e93; --accent: #10a37f; --accent2: #0d8c6d;
-  --green: #10a37f; --red: #ef4444; --amber: #f59e0b;
+  --green: #10a37f; --red: #ef4444; --amber: #f59e0b; --blue: #3b82f6;
 }
 * { box-sizing: border-box; margin: 0; }
+html, body { height: 100%; }
 body { font-family: "Microsoft YaHei", system-ui, sans-serif; background: var(--bg);
        color: var(--text); }
-
-/* ═══ 通用 ═══ */
-.view { display: none; min-height: 100vh; }
-.view.on { display: flex; flex-direction: column; }
-.hidden { display: none; }
 button { font-family: inherit; }
-spin = x;
-.spin { animation: spin 1s linear infinite; }
-@keyframes spin { to { transform: rotate(360deg); } }
-@keyframes breath { 0%,100% { box-shadow: 0 0 0 0 rgba(16,163,127,.35); }
-                    50% { box-shadow: 0 0 0 9px rgba(16,163,127,0); } }
-@keyframes slidein { from { opacity: 0; transform: translateY(14px); }
-                     to { opacity: 1; transform: none; } }
-@keyframes flow { from { stroke-dashoffset: 24; } to { stroke-dashoffset: 0; } }
-@keyframes fadein { from { opacity: 0; } to { opacity: 1; } }
 
-/* ═══ 视图一：ChatGPT 式开始页 ═══ */
-#v-start { align-items: center; justify-content: center; padding: 40px 20px; }
-.hello { font-size: 28px; font-weight: 600; margin-bottom: 10px; animation: fadein .5s; }
-.hello-sub { color: var(--muted); font-size: 15px; margin-bottom: 34px; animation: fadein .6s; }
-.startbox { width: min(680px, 92vw); }
-.inputwrap { border: 1px solid var(--line); border-radius: 26px; padding: 8px 8px 8px 20px;
-             display: flex; align-items: flex-end; gap: 10px; background: var(--bg);
-             box-shadow: 0 2px 14px rgba(0,0,0,.04); transition: border-color .2s; }
-.inputwrap:focus-within { border-color: var(--accent); }
-textarea { flex: 1; border: 0; outline: none; resize: none; font-size: 15px;
-           font-family: inherit; max-height: 160px; min-height: 28px; line-height: 1.6;
-           padding: 6px 0; background: transparent; color: var(--text); }
-.send { width: 40px; height: 40px; border-radius: 50%; border: 0; cursor: pointer;
-        background: var(--accent); color: white; font-size: 17px; flex-shrink: 0;
-        display: flex; align-items: center; justify-content: center; transition: .15s; }
-.send:hover { background: var(--accent2); }
-.send:disabled { background: var(--line); cursor: not-allowed; }
-.pills { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 18px; justify-content: center; }
-.pill { border: 1px solid var(--line); border-radius: 18px; padding: 7px 16px;
-        font-size: 13px; color: var(--muted); cursor: pointer; background: var(--bg);
-        transition: .15s; }
+@keyframes breath { 0%,100% { box-shadow: 0 0 0 0 rgba(16,163,127,.30); }
+                    50% { box-shadow: 0 0 0 10px rgba(16,163,127,0); } }
+@keyframes ping-blue { 0% { box-shadow: 0 0 0 0 rgba(59,130,246,.35); }
+                       100% { box-shadow: 0 0 0 12px rgba(59,130,246,0); } }
+@keyframes ping-amber { 0% { box-shadow: 0 0 0 0 rgba(245,158,11,.40); }
+                        100% { box-shadow: 0 0 0 12px rgba(245,158,11,0); } }
+@keyframes slidein { from { opacity: 0; transform: translateY(12px); }
+                     to { opacity: 1; transform: none; } }
+@keyframes dash { to { stroke-dashoffset: -28; } }
+
+/* ═══ 布局骨架：上滚动区 + 底部输入区（对话式，不跳页） ═══ */
+.app { display: flex; flex-direction: column; height: 100vh; max-width: 860px;
+       margin: 0 auto; }
+.chat-scroll { flex: 1; overflow-y: auto; display: flex; flex-direction: column; }
+.composer { border-top: 1px solid var(--line); padding: 14px 18px 18px; background: var(--bg); }
+.hint, .optline { color: var(--muted); font-size: 12.5px; }
+
+/* ── 欢迎区（启动后淡出） ── */
+#hero { margin: auto; text-align: center; padding: 40px 20px; animation: slidein .5s; }
+#hero.off { display: none; }
+.hello { font-size: 26px; font-weight: 600; margin-bottom: 8px; }
+.hello-sub { color: var(--muted); font-size: 14.5px; margin-bottom: 20px; }
+.pills { display: flex; gap: 8px; flex-wrap: wrap; justify-content: center; }
+.pill { border: 1px solid var(--line); border-radius: 18px; padding: 6px 14px;
+        font-size: 12.5px; color: var(--muted); cursor: pointer; transition: .15s; }
 .pill:hover { border-color: var(--accent); color: var(--accent); }
 .pill.sel { background: #ecf8f4; border-color: var(--accent); color: var(--accent); }
-.hint { margin-top: 26px; color: var(--muted); font-size: 12.5px; text-align: center; }
-.optline { display: flex; gap: 16px; justify-content: center; margin-top: 12px;
-           font-size: 13px; color: var(--muted); align-items: center; }
+
+/* ── 输入区 ── */
+.inputwrap { border: 1px solid var(--line); border-radius: 24px; padding: 6px 6px 6px 18px;
+             display: flex; align-items: flex-end; gap: 10px;
+             box-shadow: 0 2px 12px rgba(0,0,0,.04); transition: border-color .2s; }
+.inputwrap:focus-within { border-color: var(--accent); }
+textarea { flex: 1; border: 0; outline: none; resize: none; font-size: 15px;
+           font-family: inherit; max-height: 140px; min-height: 26px; line-height: 1.6;
+           padding: 6px 0; background: transparent; }
+.send { width: 38px; height: 38px; border-radius: 50%; border: 0; cursor: pointer;
+        background: var(--accent); color: white; font-size: 16px; flex-shrink: 0; }
+.send:disabled { background: var(--line); cursor: not-allowed; }
+.optline { display: flex; gap: 14px; margin-top: 10px; align-items: center; }
 .optline label { display: flex; gap: 5px; align-items: center; cursor: pointer; }
 
-/* ═══ 视图二：动态规划运行页 ═══ */
-#v-run { padding: 0; }
-.topbar { display: flex; align-items: center; gap: 14px; padding: 14px 26px;
-          border-bottom: 1px solid var(--line); position: sticky; top: 0; background: var(--bg);
-          z-index: 5; }
-.topbar .goal-snip { flex: 1; font-size: 14px; color: var(--muted);
-                     white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.prog { width: 180px; height: 6px; border-radius: 6px; background: var(--bg2); overflow: hidden; }
-.prog i { display: block; height: 100%; width: 0; background: var(--accent);
-          border-radius: 6px; transition: width .6s cubic-bezier(.4,0,.2,1); }
-.dotlive { width: 9px; height: 9px; border-radius: 50%; background: var(--green);
-           animation: breath 1.6s infinite; flex-shrink: 0; }
+/* ═══ 运行区：管线图 + 详情 ═══ */
+#runArea { padding: 26px 6px 10px; animation: slidein .4s; }
+.card { background: var(--bg); border: 1px solid var(--line); border-radius: 16px;
+        padding: 18px 20px; margin-bottom: 14px; }
+.card h4 { font-size: 12px; color: var(--muted); font-weight: normal;
+           letter-spacing: 1px; margin-bottom: 14px; }
 
-.rungrid { display: grid; grid-template-columns: 380px 1fr; gap: 0; flex: 1; min-height: 0; }
-@media (max-width: 860px) { .rungrid { grid-template-columns: 1fr; } }
+/* ── 四阶段管线 ── */
+.pipe { display: flex; align-items: flex-start; justify-content: space-between;
+        position: relative; padding: 6px 8px 0; }
+.pipe::before { content: ""; position: absolute; top: 27px; left: 9%; right: 9%;
+                height: 2px; background: var(--line); }
+.pnode { position: relative; z-index: 1; text-align: center; cursor: pointer;
+         width: 22%; transition: .15s; }
+.pnode .pdot { width: 42px; height: 42px; border-radius: 50%; border: 2px solid var(--line);
+               background: var(--bg); margin: 0 auto 8px; display: flex;
+               align-items: center; justify-content: center; font-size: 17px;
+               color: var(--muted); transition: .25s; }
+.pnode .pname { font-size: 13px; font-weight: 600; }
+.pnode .pdesc { font-size: 11px; color: var(--muted); margin-top: 2px; }
+.pnode .pcount { position: absolute; top: -4px; right: calc(50% - 34px);
+                 background: var(--amber); color: white; border-radius: 10px;
+                 font-size: 10.5px; padding: 1px 7px; opacity: 0; transition: .3s; }
+.pnode.on .pcount, .pnode.done .pcount { opacity: 1; }
+.pnode:hover .pdot { border-color: var(--accent); }
+.pnode.cur .pdot { border-color: var(--accent); color: var(--accent);
+                   animation: breath 1.7s infinite; }
+.pnode.cur .pname { color: var(--accent); }
+.pnode.done .pdot { background: var(--accent); border-color: var(--accent); color: white; }
+.pnode.done .pname { color: var(--text); }
+.pnode.flash-blue .pdot { animation: ping-blue 1s 1; border-color: var(--blue);
+                          color: var(--blue); }
+.pnode.flash-amber .pdot { animation: ping-amber 1.2s 1; border-color: var(--amber);
+                           color: var(--amber); }
+.pnode.sel .pdot { outline: 2px solid var(--accent); outline-offset: 3px; }
 
-/* 左：计划链 */
-.planpane { border-right: 1px solid var(--line); padding: 24px 22px; overflow-y: auto;
-            background: var(--bg); }
-.planpane h4 { font-size: 12px; color: var(--muted); font-weight: normal;
-               letter-spacing: 1px; margin-bottom: 16px; display: flex; gap: 8px;
-               align-items: center; }
-.tlist { position: relative; }
-.tnode { display: flex; gap: 12px; position: relative; padding-bottom: 26px;
-         animation: slidein .4s; }
-.tnode::before { content: ""; position: absolute; left: 13px; top: 28px; bottom: 0;
-                 width: 2px; background: var(--line); }
-.tnode:last-child::before { display: none; }
-.tnode.done::before { background: var(--accent); }
-.tico { width: 28px; height: 28px; border-radius: 50%; border: 2px solid var(--line);
-        background: var(--bg); display: flex; align-items: center; justify-content: center;
-        font-size: 12px; color: var(--muted); flex-shrink: 0; z-index: 1; }
-.tnode.run .tico { border-color: var(--accent); color: var(--accent); animation: breath 1.6s infinite; }
-.tnode.done .tico { background: var(--accent); border-color: var(--accent); color: white; }
-.tnode.fail .tico { border-color: var(--red); color: var(--red); }
-.tbody { padding-top: 3px; }
-.ttitle { font-size: 13.5px; line-height: 1.45; }
-.tmeta { font-size: 11.5px; color: var(--muted); margin-top: 3px; display: flex; gap: 8px; }
-.tmeta .st-done { color: var(--green); } .tmeta .st-fail { color: var(--red); }
-.tnode.new { outline: 1px dashed var(--amber); outline-offset: 4px; border-radius: 6px; }
+/* replan 回环虚线（SVG 叠加） */
+.loopsvg { position: absolute; left: 10%; right: 10%; top: 0; height: 100%;
+           pointer-events: none; z-index: 0; }
+.loopsvg path { fill: none; stroke: var(--amber); stroke-width: 1.6;
+                stroke-dasharray: 5 4; opacity: 0; transition: opacity .4s; }
+.loopsvg.show path { opacity: .85; animation: dash 1.2s linear infinite; }
 
-/* 右：日志与事件 */
-.logpane { padding: 24px 28px; overflow-y: auto; background: var(--bg2); }
-.logpane h4 { font-size: 12px; color: var(--muted); font-weight: normal;
-              letter-spacing: 1px; margin-bottom: 14px; }
-.evline { display: flex; gap: 12px; padding: 9px 14px; border-radius: 10px;
-          background: var(--bg); margin-bottom: 8px; font-size: 13px;
-          animation: slidein .35s; border: 1px solid transparent; }
-.evline .ts { color: var(--muted); font-family: Consolas, monospace; font-size: 11.5px;
-              padding-top: 2px; flex-shrink: 0; }
-.evline.err { border-color: #fecaca; background: #fef2f2; }
-.evline.hi { border-color: #fde68a; background: #fffbeb; }
-.evline.ok { border-color: #bbf7d0; }
-.evalcard { margin: 14px 0; padding: 12px 16px; border-radius: 12px; background: var(--bg);
-            border: 1px solid var(--line); font-size: 13px; animation: slidein .4s; }
-.evalcard b { font-size: 12px; color: var(--muted); font-weight: normal;
-              display: block; margin-bottom: 6px; letter-spacing: 1px; }
+/* ── 详情面板 ── */
+#detail { min-height: 80px; }
+.drow { display: flex; gap: 10px; padding: 9px 12px; border-radius: 10px;
+        background: var(--bg2); margin-bottom: 6px; font-size: 13px;
+        animation: slidein .3s; }
+.drow .k { color: var(--muted); flex-shrink: 0; width: 84px; font-size: 12px; }
+.drow .v { flex: 1; word-break: break-all; }
+.tag { display: inline-block; font-size: 11px; padding: 1px 8px; border-radius: 10px;
+       margin-right: 6px; }
+.t-ok { background: #e7f6f0; color: var(--green); }
+.t-no { background: #fdeaea; color: var(--red); }
+.t-mut { background: var(--bg); color: var(--muted); border: 1px solid var(--line); }
+.empty { color: var(--muted); font-size: 13px; padding: 8px 4px; }
 
-/* HITL 审批 */
-.hitl { margin: 6px 0 14px; padding: 16px 18px; border-radius: 14px; background: var(--bg);
-        border: 1.5px solid var(--amber); animation: slidein .4s; }
-.hitl .code { font-family: Consolas, monospace; background: var(--bg2); border-radius: 8px;
-              padding: 10px 12px; margin: 10px 0; font-size: 12.5px; }
+/* ── 审批卡 ── */
+.hitl { border: 1.5px solid var(--amber); border-radius: 14px; padding: 16px 18px;
+        margin-bottom: 14px; animation: slidein .35s; background: #fffdf5; }
+.hitl .code { font-family: Consolas, monospace; background: var(--bg2);
+              border-radius: 8px; padding: 10px 12px; margin: 10px 0; font-size: 12.5px; }
 .hitl .btns { display: flex; gap: 10px; }
-.hitl button { flex: 1; padding: 10px; border-radius: 10px; border: 0; cursor: pointer;
-               font-size: 13.5px; }
+.hitl button { flex: 1; padding: 9px; border-radius: 10px; border: 0; cursor: pointer;
+               font-size: 13px; }
 .hitl .yes { background: var(--accent); color: white; }
-.hitl .no { background: var(--bg2); color: var(--text); border: 1px solid var(--line); }
+.hitl .no { background: var(--bg); color: var(--text); border: 1px solid var(--line); }
 
-/* ═══ 视图三：结束页 ═══ */
-#v-done { align-items: center; padding: 60px 24px; }
-.donecard { width: min(760px, 94vw); animation: slidein .5s; }
-.donehead { display: flex; align-items: center; gap: 12px; margin-bottom: 6px; }
-.donehead .big { font-size: 22px; font-weight: 600; }
-.donehead .emo { font-size: 30px; }
-.donesub { color: var(--muted); font-size: 14px; margin-bottom: 22px; }
-.statrow { display: grid; grid-template-columns: repeat(5, 1fr); gap: 10px; margin-bottom: 20px; }
-.stat { background: var(--bg2); border-radius: 14px; padding: 16px 8px; text-align: center; }
-.stat .n { font-size: 22px; font-weight: 600; }
-.stat .l { font-size: 11.5px; color: var(--muted); margin-top: 5px; }
-.answer { background: var(--bg2); border-radius: 16px; padding: 24px 26px;
-          white-space: pre-wrap; line-height: 1.8; font-size: 14px; }
-.answer h5 { font-size: 12px; color: var(--muted); font-weight: normal; margin-bottom: 10px;
-             letter-spacing: 1px; }
-.donebtns { display: flex; gap: 12px; margin-top: 22px; }
-.donebtns button { padding: 12px 26px; border-radius: 12px; border: 1px solid var(--line);
-                   background: var(--bg); cursor: pointer; font-size: 14px; }
+/* ── 最终答案 ── */
+.md p { margin: 0 0 10px; line-height: 1.75; }
+.md h3, .md h2 { margin: 14px 0 8px; font-size: 15px; }
+.md ul { margin: 0 0 10px 20px; }
+.md li { margin-bottom: 4px; line-height: 1.6; }
+.md a { color: var(--accent); }
+.md hr { border: 0; border-top: 1px solid var(--line); margin: 12px 0; }
+
+.statrow { display: grid; grid-template-columns: repeat(5, 1fr); gap: 10px;
+           margin: 4px 0 6px; }
+.stat { background: var(--bg2); border-radius: 12px; padding: 12px 6px; text-align: center; }
+.stat .n { font-size: 19px; font-weight: 600; }
+.stat .l { font-size: 11px; color: var(--muted); margin-top: 4px; }
+.donebtns { display: flex; gap: 10px; margin-top: 4px; }
+.donebtns button { padding: 10px 22px; border-radius: 11px; border: 1px solid var(--line);
+                   background: var(--bg); cursor: pointer; font-size: 13.5px; }
 .donebtns .prime { background: var(--accent); color: white; border: 0; }
+.hidden { display: none; }
 </style>
 </head>
 <body>
-
-<!-- ═══ 视图一：开始（ChatGPT 式） ═══ -->
-<div class="view on" id="v-start">
-  <div class="hello">今天想做点什么？</div>
-  <div class="hello-sub">描述一个复杂技术任务，我会拆解计划、调用工具、动态调整并交付结果</div>
-  <div class="startbox">
-    <div class="inputwrap">
-      <textarea id="goal" rows="1" placeholder="例如：分析 langchain-ai/langgraph 仓库，并制定学习路线…"></textarea>
-      <button class="send" id="start" title="开始（Ctrl+Enter）">↑</button>
+<div class="app">
+  <div class="chat-scroll" id="chatScroll">
+    <div id="hero">
+      <div class="hello">今天想做点什么？</div>
+      <div class="hello-sub">描述一个复杂技术任务，我来拆解、执行、质检、动态调整</div>
+      <div class="pills">
+        <div class="pill sel" data-type="github_analysis">🐙 GitHub 项目分析</div>
+        <div class="pill" data-type="learning_path">📖 技术学习规划</div>
+        <div class="pill" data-type="problem_solving">🔧 问题诊断</div>
+        <div class="pill" data-type="free">✏️ 自由任务</div>
+      </div>
     </div>
-    <div class="pills">
-      <div class="pill sel" data-type="github_analysis">🐙 GitHub 项目分析</div>
-      <div class="pill" data-type="learning_path">📖 技术学习规划</div>
-      <div class="pill" data-type="problem_solving">🔧 问题诊断</div>
-      <div class="pill" data-type="free">✏️ 自由任务</div>
+
+    <div id="runArea" class="hidden">
+      <!-- 用户目标气泡 -->
+      <div class="card" style="background:#ecf8f4;border-color:#c9ede0">
+        <b style="font-size:14px" id="goalEcho"></b>
+        <span class="hint" id="modeEcho" style="margin-left:10px"></span>
+      </div>
+
+      <!-- 四阶段管线（可点击） -->
+      <div class="card">
+        <h4>执行管线 · 点击阶段查看详情</h4>
+        <div class="pipe" id="pipe">
+          <svg class="loopsvg" id="loopsvg" viewBox="0 0 100 60" preserveAspectRatio="none">
+            <path d="M 72 30 C 72 58, 30 58, 30 32" marker-end=""/>
+          </svg>
+          <div class="pnode" data-stage="planner" id="pn-planner">
+            <div class="pcount" style="background:var(--accent)"></div>
+            <div class="pdot">🧭</div><div class="pname">Planner</div>
+            <div class="pdesc">拆解目标</div></div>
+          <div class="pnode" data-stage="executor" id="pn-executor">
+            <div class="pcount"></div>
+            <div class="pdot">⚙️</div><div class="pname">Executor</div>
+            <div class="pdesc">工具执行</div></div>
+          <div class="pnode" data-stage="evaluator" id="pn-evaluator">
+            <div class="pcount"></div>
+            <div class="pdot">🔍</div><div class="pname">Evaluator</div>
+            <div class="pdesc">结果质检</div></div>
+          <div class="pnode" data-stage="replanner" id="pn-replanner">
+            <div class="pcount" id="replanCnt"></div>
+            <div class="pdot">🔄</div><div class="pname">Replanner</div>
+            <div class="pdesc">动态调整</div></div>
+        </div>
+      </div>
+
+      <!-- 详情面板（随点击切换） -->
+      <div class="card"><h4 id="detailTitle">详情</h4><div id="detail"></div></div>
+
+      <div id="hitlWrap"></div>
+
+      <div class="card hidden" id="finalCard">
+        <h4>最终答案</h4>
+        <div class="md" id="answer"></div>
+        <div class="statrow" id="doneStats"></div>
+        <div class="donebtns">
+          <button class="prime" onclick="reset()">继续新任务</button>
+          <button id="dlReport">下载运行报告</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="composer">
+    <div class="inputwrap">
+      <textarea id="goal" rows="1" placeholder="描述你的任务…（Ctrl+Enter 发送）"></textarea>
+      <button class="send" id="start">↑</button>
     </div>
     <div class="optline">
       <label><input type="checkbox" id="adaptive" checked> 自适应重规划</label>
-      <span style="color:#c9c9cf">·</span>
-      <span>运行中断后可凭 run_id 续跑</span>
-    </div>
-    <div class="hint">7 个工具 · 断点恢复 · 高危操作人工审批 · 100 条评测集实验验证</div>
-  </div>
-</div>
-
-<!-- ═══ 视图二：运行中（动态规划） ═══ -->
-<div class="view" id="v-run">
-  <div class="topbar">
-    <div class="dotlive"></div>
-    <div class="goal-snip" id="goalSnip"></div>
-    <div class="prog"><i id="progBar"></i></div>
-    <span style="font-size:12.5px;color:var(--muted)" id="progTxt">0%</span>
-  </div>
-  <div class="rungrid">
-    <div class="planpane">
-      <h4><span class="spin" style="display:inline-block">⚙</span> 执行计划<span id="replanBadge" style="color:var(--amber)"></span></h4>
-      <div class="tlist" id="plan"></div>
-    </div>
-    <div class="logpane">
-      <h4>实时动态</h4>
-      <div id="rlog"></div>
-      <div id="hitlWrap"></div>
-    </div>
-  </div>
-</div>
-
-<!-- ═══ 视图三：结束 ═══ -->
-<div class="view" id="v-done">
-  <div class="donecard">
-    <div class="donehead"><span class="emo" id="doneEmo">✅</span>
-      <span class="big" id="doneTitle">任务完成</span></div>
-    <div class="donesub" id="doneSub"></div>
-    <div class="statrow" id="doneStats"></div>
-    <div class="answer"><h5>最终答案</h5><div id="answer"></div></div>
-    <div class="donebtns">
-      <button class="prime" onclick="showStart()">继续新任务</button>
-      <button id="dlReport">下载运行报告</button>
+      <span>·</span><span>7 工具 · 断点恢复 · 高危审批 · 100 条评测集验证</span>
     </div>
   </div>
 </div>
 
 <script>
 const $ = id => document.getElementById(id);
-let runId = null, es = null, seenIds = new Set(), evCount = 0;
+let runId = null, es = null, snap = {state: {}}, curStage = null;
+let stageSeen = {planner: false, executor: false, evaluator: false, replanner: false};
+let detailStage = "executor";
 
-/* ── 视图切换 ── */
-function show(id) {
-  document.querySelectorAll(".view").forEach(v => v.classList.remove("on"));
-  $(id).classList.add("on");
-}
-function showStart() { show("v-start"); $("goal").focus(); }
-
-/* ── 开始页交互 ── */
+/* ── 胶囊/输入 ── */
 document.querySelectorAll(".pill").forEach(p => p.onclick = () => {
   document.querySelectorAll(".pill").forEach(x => x.classList.remove("sel"));
   p.classList.add("sel");
@@ -228,143 +236,231 @@ document.querySelectorAll(".pill").forEach(p => p.onclick = () => {
 const goal = $("goal");
 goal.addEventListener("input", () => {
   goal.style.height = "auto";
-  goal.style.height = Math.min(goal.scrollHeight, 160) + "px";
+  goal.style.height = Math.min(goal.scrollHeight, 140) + "px";
 });
 goal.addEventListener("keydown", e => { if (e.key === "Enter" && e.ctrlKey) $("start").click(); });
 
-/* ── 启动 ── */
+/* ── 启动（原地展开，不跳页） ── */
 $("start").onclick = async () => {
   const g = goal.value.trim();
   if (!g) { goal.focus(); return; }
-  $("start").disabled = true;
-  show("v-run");
-  $("goalSnip").textContent = g;
-  $("replanBadge").textContent = "";
-  evCount = 0;
+  $("start").disabled = true; goal.disabled = true;
+  $("hero").classList.add("off");
+  $("runArea").classList.remove("hidden");
+  $("finalCard").classList.add("hidden");
+  $("goalEcho").textContent = g;
+  $("modeEcho").textContent = $("adaptive").checked ? "自适应模式" : "固定计划模式";
+  stageSeen = {planner: false, executor: false, evaluator: false, replanner: false};
+  setStage("planner", "cur");
+  selectDetail("planner");
+
   const r = await fetch("/api/runs", {
     method: "POST", headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ goal: g, adaptive: $("adaptive").checked })
   }).then(x => x.json());
   runId = r.run_id;
-  ev(`🚀 运行已创建（run_id: <b>${runId}</b>）`);
+  await refresh();
 
   es = new EventSource(`/api/runs/${runId}/events`);
   es.addEventListener("node_update", e => {
     const node = JSON.parse(e.data).node;
-    evCount++;
-    if (node === "planner") ev("🧭 Planner 正在拆解目标…");
-    if (node === "executor") ev("⚙️ Executor 执行任务");
-    if (node === "evaluator") ev("🔍 Evaluator 质检结果");
-    if (node === "replanner") ev(`🔄 <b>Replanner 动态调整计划</b>`, "hi");
-    if (node === "human_gate") ev("⛔ 进入人工审批闸口", "hi");
-    if (node === "final_answer") ev("📝 正在汇总最终答案…");
+    if (node === "planner") { setStage("planner", "cur"); }
+    if (node === "executor") {
+      if (stageSeen.planner) setStage("planner", "done");
+      setStage("executor", "cur"); flash("executor", "flash-blue");
+    }
+    if (node === "evaluator") { flash("evaluator", "flash-blue"); setStage("evaluator", "on"); }
+    if (node === "replanner") {
+      flash("replanner", "flash-amber");
+      $("loopsvg").classList.add("show");
+    }
+    if (node === "final_answer") {
+      ["planner", "executor", "evaluator"].forEach(s => setStage(s, "done"));
+    }
+    stageSeen[node] = true;
     refresh();
   });
   es.addEventListener("hitl_request", e => {
     const d = JSON.parse(e.data);
     $("hitlWrap").innerHTML = `
-      <div class="hitl">
-        <b>⛔ 高危操作等待审批</b>
+      <div class="hitl"><b>⛔ 高危操作等待审批</b>
         <div class="code">${(d.code || "(见任务描述)").replace(/</g, "&lt;")}</div>
         <div class="btns">
           <button class="yes" onclick="decide(true)">✅ 批准执行</button>
           <button class="no" onclick="decide(false)">🚫 拒绝</button>
-        </div>
-      </div>`;
+        </div></div>`;
     $("hitlWrap").scrollIntoView({ behavior: "smooth", block: "end" });
   });
   es.addEventListener("hitl_resolved", e => {
     const ok = JSON.parse(e.data).approved;
     $("hitlWrap").innerHTML = "";
-    ev(ok ? "✅ 审批通过，工具继续执行" : "🚫 用户拒绝，任务标记失败（人的否决是终审）", ok ? "ok" : "err");
+    renderDetail();
   });
-  es.addEventListener("final", e => { es.close(); finish(e.data); });
-  es.addEventListener("error", e => ev("❌ " + (e.data || "连接中断"), "err"));
+  es.addEventListener("final", e => { es.close(); finish(JSON.parse(e.data)); });
+  es.addEventListener("error", e => refresh());
 };
 
-function ev(html, cls = "") {
-  const ts = new Date().toLocaleTimeString("zh", { hour12: false });
-  const div = document.createElement("div");
-  div.className = "evline " + cls;
-  div.innerHTML = `<span class="ts">${ts}</span><span>${html}</span>`;
-  $("rlog").appendChild(div);
-  div.scrollIntoView({ behavior: "smooth", block: "end" });
+function setStage(s, cls) {
+  const el = $("pn-" + s);
+  el.classList.remove("cur");
+  if (cls === "done") el.classList.add("done");
+  if (cls === "cur") { el.classList.add("cur"); el.classList.remove("done"); }
+}
+function flash(s, cls) {
+  const el = $("pn-" + s);
+  el.classList.remove(cls); void el.offsetWidth;      // 重置动画
+  el.classList.add(cls);
 }
 
-/* ── 计划链渲染（新任务滑入 + 状态流转） ── */
+/* ── 快照拉取 ── */
 async function refresh() {
+  if (!runId) return;
   const r = await fetch(`/api/runs/${runId}`);
   if (!r.ok) return;
-  const { state } = await r.json();
-  const plan = state.plan || [];
-  const cur = state.current_task || 0;
-  const doneN = plan.filter(t => t.status === "completed").length;
-  const pct = plan.length ? Math.min(100, Math.round(
-    (doneN + (plan.length > doneN ? 0.5 : 0)) / plan.length * 100)) : 0;
-  $("progBar").style.width = pct + "%";
-  $("progTxt").textContent = pct + "%";
-  $("replanBadge").textContent = state.replan_count
-    ? `（已调整 ${state.replan_count} 次）` : "";
+  const data = await r.json();
+  snap = data;
+  const st = data.state || {};
+  if (st.replan_count) {
+    $("replanCnt").textContent = st.replan_count;
+    $("pn-replanner").classList.add("on");
+    $("loopsvg").classList.add("show");
+  }
+  renderDetail();
+}
 
-  $("plan").innerHTML = plan.map((t, i) => {
-    const isNew = !seenIds.has(t.id) && seenIds.size > 0;   // replan 插入的新节点
-    const cls = t.status === "completed" ? "done"
-      : t.status === "failed" ? "fail"
-      : i === cur - 0 && t.status === "running" ? "run" : "";
-    const ico = t.status === "completed" ? "✓"
-      : t.status === "failed" ? "✕" : i + 1;
-    const st = t.status === "completed" ? '<span class="st-done">已完成</span>'
-      : t.status === "failed" ? '<span class="st-fail">已失败</span>'
-      : t.status === "running" ? "执行中…" : "待执行";
-    return `<div class="tnode ${cls} ${isNew ? "new" : ""}">
-      <div class="tico">${ico}</div>
-      <div class="tbody"><div class="ttitle">${t.description}</div>
-      <div class="tmeta"><span>${t.tool || "-"}</span>${st}</div></div></div>`;
-  }).join("");
-  plan.forEach(t => seenIds.add(t.id));
+/* ── 详情面板：四阶段各看各的 ── */
+document.querySelectorAll(".pnode").forEach(n => n.onclick = () =>
+  selectDetail(n.dataset.stage));
+function selectDetail(s) {
+  detailStage = s;
+  document.querySelectorAll(".pnode").forEach(x =>
+    x.classList.toggle("sel", x.dataset.stage === s));
+  renderDetail();
+}
+function renderDetail() {
+  const st = snap.state || {};
+  const titles = {planner: "Planner · 任务规划", executor: "Executor · 工具执行",
+                  evaluator: "Evaluator · 质检判定", replanner: "Replanner · 动态调整"};
+  $("detailTitle").textContent = titles[detailStage];
+  const D = $("detail");
+  D.innerHTML = "";
+
+  if (detailStage === "planner") {
+    const plan = st.plan || [];
+    if (!plan.length) { D.innerHTML = `<div class="empty">正在拆解目标…</div>`; return; }
+    plan.forEach(t => {
+      const ok = t.status === "completed", bad = t.status === "failed";
+      D.innerHTML += `<div class="drow"><span class="k">${t.id}</span>
+        <span class="v"><span class="tag ${ok ? "t-ok" : bad ? "t-no" : "t-mut"}">
+        ${ok ? "完成" : bad ? "失败" : "待执行"}</span>${t.description}
+        <span style="color:var(--muted)">（${t.tool || "-"}）</span></span></div>`;
+    });
+  }
+
+  if (detailStage === "executor") {
+    const obs = st.observations || [];
+    if (!obs.length) { D.innerHTML = `<div class="empty">尚无工具调用</div>`; return; }
+    obs.slice().reverse().forEach(o => {
+      D.innerHTML += `<div class="drow"><span class="k">${o.task_id}</span>
+        <span class="v"><span class="tag ${o.success ? "t-ok" : "t-no"}">${o.tool}
+        ${o.success ? "√" : "✕"}</span>
+        ${o.success ? (o.summary || "").slice(0, 160).replace(/</g, "&lt;") + "…"
+                    : `<span style="color:var(--red)">${(o.error || "").replace(/</g, "&lt;")}</span>`}
+        <span style="color:var(--muted);font-size:11px"> · ${o.latency_ms}ms</span></span></div>`;
+    });
+  }
+
+  if (detailStage === "evaluator") {
+    const ev = st.evaluation;
+    if (!ev) { D.innerHTML = `<div class="empty">暂无质检判定</div>`; return; }
+    D.innerHTML = `<div class="drow"><span class="k">判定</span>
+      <span class="v"><span class="tag ${ev.success ? "t-ok" : "t-no"}">
+      ${ev.success ? "意图达成" : "未达成"}</span>${(ev.reason || "").replace(/</g, "&lt;")}</span></div>
+      ${ev.need_replan ? `<div class="drow"><span class="k">信息缺口</span>
+      <span class="v">${(ev.missing_info || "需要补充信息").replace(/</g, "&lt;")}</span></div>` : ""}`;
+  }
+
+  if (detailStage === "replanner") {
+    const n = st.replan_count || 0;
+    if (!n) { D.innerHTML = `<div class="empty">本次运行未触发动态调整${$("adaptive").checked ? "" : "（固定计划模式）"}</div>`; return; }
+    D.innerHTML = `<div class="drow"><span class="k">调整次数</span>
+      <span class="v">已重规划 <b>${n}</b> 次（上限 3 次，熔断保护）</span></div>
+      <div class="drow"><span class="k">当前计划</span>
+      <span class="v">${(st.plan || []).length} 个任务，新任务已合并进队列——
+      点击 Planner 阶段查看最新计划</span></div>`;
+  }
 }
 
 /* ── 结束 ── */
 function finish(answer) {
-  fetch(`/api/runs/${runId}`).then(r => r.json()).then(({ status, state }) => {
-    const obs = state.observations || [];
-    const ok = obs.filter(o => o.success).length;
-    const plan = state.plan || [];
-    const doneN = plan.filter(t => t.status === "completed").length;
-    const allDone = status === "done" && doneN === plan.length;
-    $("doneEmo").textContent = allDone ? "🎉" : "🧩";
-    $("doneTitle").textContent = allDone ? "任务完成" : "任务结束（部分未完成）";
-    $("doneSub").textContent = `run_id ${runId} · 共 ${obs.length} 次工具调用`
-      + (state.replan_count ? ` · 动态调整 ${state.replan_count} 次` : "");
-    $("doneStats").innerHTML = [
-      [obs.length, "工具调用"], [ok, "调用成功"], [plan.length, "计划任务"],
-      [state.replan_count || 0, "动态调整"],
-      [plan.length ? Math.round(doneN / plan.length * 100) + "%" : "-", "完成度"]
-    ].map(([n, l]) => `<div class="stat"><div class="n">${n}</div><div class="l">${l}</div></div>`).join("");
-    $("answer").textContent = answer || "(无最终答案)";
-    show("v-done");
-    $("start").disabled = false;
-  });
+  ["planner", "executor", "evaluator"].forEach(s => setStage(s, "done"));
+  const st = snap.state || {};
+  const obs = st.observations || [];
+  const okN = obs.filter(o => o.success).length;
+  const plan = st.plan || [];
+  const doneN = plan.filter(t => t.status === "completed").length;
+  $("answer").innerHTML = mdRender(answer || "(无最终答案)");
+  $("doneStats").innerHTML = [
+    [obs.length, "工具调用"], [okN, "调用成功"], [plan.length, "计划任务"],
+    [st.replan_count || 0, "动态调整"],
+    [plan.length ? Math.round(doneN / plan.length * 100) + "%" : "-", "完成度"]
+  ].map(([n, l]) => `<div class="stat"><div class="n">${n}</div><div class="l">${l}</div></div>`).join("");
+  $("finalCard").classList.remove("hidden");
+  $("finalCard").scrollIntoView({ behavior: "smooth" });
+  $("start").disabled = false; goal.disabled = false;
 }
 
-$("dlReport").onclick = () => {
-  fetch(`/api/runs/${runId}`).then(r => r.json()).then(snap => {
-    const blob = new Blob([JSON.stringify(snap, null, 1)], {type: "application/json"});
-    const a = document.createElement("a");
-    a.href = URL.createObjectURL(blob);
-    a.download = `report-${runId}.json`;
-    a.click();
-  });
-};
+/* ── 轻量 Markdown 渲染（修 \n 问题 + 基础排版） ── */
+function mdRender(text) {
+  const esc = text.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+  const lines = esc.split(/\r?\n/);
+  let html = "", inList = false;
+  for (const ln of lines) {
+    const t = ln.trim();
+    if (/^[-*]\s+/.test(t)) {
+      if (!inList) { html += "<ul>"; inList = true; }
+      html += "<li>" + inline(t.replace(/^[-*]\s+/, "")) + "</li>";
+    } else {
+      if (inList) { html += "</ul>"; inList = false; }
+      if (/^#{1,4}\s+/.test(t)) html += `<h3>${inline(t.replace(/^#{1,4}\s+/, ""))}</h3>`;
+      else if (/^---+$/.test(t)) html += "<hr>";
+      else if (t === "") html += "";
+      else html += `<p>${inline(t)}</p>`;
+    }
+  }
+  if (inList) html += "</ul>";
+  return html;
+  function inline(s) {
+    return s.replace(/\*\*(.+?)\*\*/g, "<b>$1</b>")
+            .replace(/(https?:\/\/[^\s<)]+)/g, '<a href="$1" target="_blank">$1</a>');
+  }
+}
 
+/* ── 审批 / 报告 / 重置 ── */
 function decide(approved) {
   fetch(`/api/runs/${runId}/approvals`, {
     method: "POST", headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ approved })
   });
 }
-
-showStart();
+$("dlReport").onclick = () => {
+  fetch(`/api/runs/${runId}`).then(r => r.json()).then(s => {
+    const blob = new Blob([JSON.stringify(s, null, 1)], {type: "application/json"});
+    const a = document.createElement("a");
+    a.href = URL.createObjectURL(blob);
+    a.download = `report-${runId}.json`;
+    a.click();
+  });
+};
+function reset() {
+  $("runArea").classList.add("hidden");
+  $("hero").classList.remove("off");
+  goal.value = ""; goal.style.height = "auto"; goal.focus();
+  document.querySelectorAll(".pnode").forEach(n =>
+    n.className = "pnode" + (n.dataset.stage === "planner" ? " cur" : ""));
+  $("loopsvg").classList.remove("show");
+  $("hitlWrap").innerHTML = "";
+}
 </script>
 </body>
 </html>
