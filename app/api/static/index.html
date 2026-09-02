@@ -1,121 +1,378 @@
 <!DOCTYPE html>
-<html lang="zh" data-theme="dark">
+<html lang="zh">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Adaptive Task Planning Agent</title>
-<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@picocss/pico@2/css/pico.min.css">
 <style>
-  main.container { max-width: 900px; padding-top: 24px; padding-bottom: 60px; }
-  h1 { font-size: 20px; }
-  label.check { font-size: 13px; display: flex; align-items: center; gap: 6px; margin: 0; }
-  .hidden { display: none; }
-  .task { padding: 4px 0; font-size: 14px; }
-  .done { color: #6fe08a; } .failed { color: #ff7b7b; } .run { color: #ffd166; }
-  .log { font-family: Consolas, monospace; font-size: 12.5px; white-space: pre-wrap;
-         max-height: 260px; overflow-y: auto; }
-  .answer { white-space: pre-wrap; line-height: 1.7; }
-  #hitlPanel { border-color: #ffd166; }
+:root {
+  --bg: #0d1220; --panel: #141c2e; --panel2: #1a2338; --line: #232e4a;
+  --text: #e6ecf5; --muted: #8fa3c8; --accent: #6c5ce7; --accent2: #8b7cf7;
+  --green: #2ecc71; --red: #ff6b6b; --yellow: #ffd166;
+}
+* { box-sizing: border-box; margin: 0; }
+body { font-family: "Microsoft YaHei", system-ui, sans-serif; background: var(--bg); color: var(--text); }
+.app { display: flex; min-height: 100vh; }
+
+/* ── 侧边栏 ── */
+.side { width: 200px; background: #0a0e18; border-right: 1px solid var(--line);
+        padding: 18px 12px; display: flex; flex-direction: column; gap: 4px; }
+.logo { display: flex; align-items: center; gap: 8px; font-weight: bold;
+        font-size: 14px; padding: 6px 8px 18px; }
+.nav { display: flex; align-items: center; gap: 10px; padding: 10px 12px;
+       border-radius: 8px; cursor: pointer; color: var(--muted); font-size: 13.5px; }
+.nav:hover { background: var(--panel); color: var(--text); }
+.nav.active { background: var(--accent); color: white; }
+.side .foot { margin-top: auto; font-size: 11px; color: var(--muted); padding: 8px; }
+
+/* ── 主区 ── */
+.main { flex: 1; padding: 26px 34px; max-width: 980px; }
+.view { display: none; } .view.on { display: block; }
+.title-lg { font-size: 22px; margin-bottom: 6px; }
+.sub { color: var(--muted); font-size: 14px; margin-bottom: 22px; }
+
+.card { background: var(--panel); border: 1px solid var(--line); border-radius: 12px;
+        padding: 16px 18px; margin-top: 16px; }
+.card h3 { font-size: 13.5px; color: var(--muted); margin-bottom: 12px; font-weight: normal; }
+.grid3 { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; }
+.grid5 { display: grid; grid-template-columns: repeat(5, 1fr); gap: 10px; }
+
+/* 能力/类型卡片 */
+.cap { background: var(--panel2); border: 1px solid var(--line); border-radius: 10px;
+       padding: 16px 12px; text-align: center; cursor: pointer; transition: .15s; }
+.cap:hover { border-color: var(--accent); }
+.cap.sel { border-color: var(--accent); background: #1d2140; box-shadow: 0 0 0 1px var(--accent); }
+.cap .ico { font-size: 24px; } .cap .t { font-size: 14px; margin: 8px 0 4px; }
+.cap .d { font-size: 11.5px; color: var(--muted); line-height: 1.5; }
+
+textarea { width: 100%; min-height: 130px; resize: vertical; background: var(--panel2);
+           border: 1px solid var(--line); border-radius: 10px; color: var(--text);
+           padding: 12px; font-size: 13.5px; font-family: inherit; }
+.counter { text-align: right; font-size: 11px; color: var(--muted); margin-top: 4px; }
+.btn-big { width: 100%; padding: 13px; border: 0; border-radius: 10px; cursor: pointer;
+           background: var(--accent); color: white; font-size: 15px; margin-top: 16px; }
+.btn-big:hover { background: var(--accent2); }
+.btn-big:disabled { opacity: .5; cursor: not-allowed; }
+
+/* 运行界面 */
+.meta { display: grid; grid-template-columns: 2fr 1fr 1fr; gap: 8px; font-size: 13px;
+        color: var(--muted); margin-top: 8px; }
+.meta b { color: var(--text); font-weight: normal; }
+.timeline { display: flex; margin: 22px 0 6px; }
+.step { flex: 1; text-align: center; position: relative; font-size: 12.5px; color: var(--muted); }
+.step::before { content: ""; position: absolute; top: 13px; left: -50%; width: 100%;
+                height: 2px; background: var(--line); }
+.step:first-child::before { display: none; }
+.dot { width: 26px; height: 26px; border-radius: 50%; background: var(--panel2);
+       border: 2px solid var(--line); margin: 0 auto 8px; display: flex;
+       align-items: center; justify-content: center; font-size: 12px; position: relative; z-index: 1; }
+.step.done .dot { background: var(--green); border-color: var(--green); color: #06220f; }
+.step.done::before { background: var(--green); }
+.step.cur .dot { border-color: var(--accent); color: var(--accent); }
+.step.cur { color: var(--accent2); }
+
+.task { display: flex; align-items: center; gap: 10px; padding: 9px 10px;
+        border-radius: 8px; font-size: 13.5px; background: var(--panel2); margin-bottom: 6px; }
+.task .no { color: var(--muted); width: 18px; }
+.badge { margin-left: auto; font-size: 11px; padding: 2px 9px; border-radius: 20px; }
+.b-done { background: #10331f; color: #6fe08a; } .b-fail { background: #3a1616; color: #ff9b9b; }
+.b-run { background: #33290f; color: #ffd166; } .b-wait { background: #232c44; color: var(--muted); }
+
+.logline { display: flex; gap: 10px; padding: 7px 0; border-bottom: 1px dashed var(--line);
+           font-size: 12.5px; }
+.logline .ts { color: var(--muted); font-family: Consolas, monospace; flex-shrink: 0; }
+.two { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+.stat { background: var(--panel2); border-radius: 10px; padding: 14px 10px; text-align: center; }
+.stat .n { font-size: 22px; font-weight: bold; }
+.stat .l { font-size: 11.5px; color: var(--muted); margin-top: 4px; }
+.toolbar { display: flex; gap: 10px; margin: 14px 0; }
+.toolbar button { flex: 1; padding: 10px; border: 1px solid var(--line); border-radius: 8px;
+                  background: var(--panel2); color: var(--text); cursor: pointer; font-size: 13px; }
+.toolbar button:hover { border-color: var(--accent); }
+.hitl-box { border: 1px solid var(--yellow); background: #2a2413; border-radius: 10px;
+            padding: 14px; margin-top: 12px; }
+.hidden { display: none; }
+pre.wrap { white-space: pre-wrap; font-family: inherit; line-height: 1.7; font-size: 13.5px; }
 </style>
 </head>
 <body>
-<main class="container">
-  <h1>🤖 Adaptive Task Planning Agent</h1>
+<div class="app">
+  <aside class="side">
+    <div class="logo">🤖 Adaptive Planner</div>
+    <div class="nav active" data-nav="start">🆕 新建任务</div>
+    <div class="nav" onclick="alert('V2 规划：历史运行列表（plan.md §19）')">📋 任务列表</div>
+    <div class="nav" onclick="alert('对应 search_knowledge 工具的笔记语料库 data/knowledge/')">📚 知识库</div>
+    <div class="nav" onclick="alert('对应 save_memory 写入的长期记忆（memory.sqlite）')">🧠 记忆中心</div>
+    <div class="nav" onclick="alert('7 个工具：搜索/抓取/GitHub/读文件/笔记检索/记忆/计算器(HITL)')">🔧 工具管理</div>
+    <div class="nav" onclick="alert('V2 规划中')">⚙️ 设置</div>
+    <div class="foot">W6 · 工程化交付版</div>
+  </aside>
 
-  <div class="grid">
-    <input type="text" id="goal" placeholder="输入复杂技术任务，如：分析 langchain-ai/langgraph 仓库并找中文教程">
-    <button id="start">启动</button>
-  </div>
-  <label class="check"><input type="checkbox" id="adaptive" checked> 自适应重规划</label>
+  <main class="main">
+    <!-- ═══ 视图一：开始界面 ═══ -->
+    <div class="view on" id="v-start">
+      <div class="title-lg">你好！我是你的任务规划助手 👋</div>
+      <div class="sub">我可以帮你分析复杂任务，智能规划并执行多步骤工作</div>
 
-  <article id="statusPanel">状态：待命</article>
+      <div class="grid3">
+        <div class="cap"><div class="ico">🧭</div><div class="t">智能规划</div>
+          <div class="d">自动分析任务，生成最优执行计划</div></div>
+        <div class="cap"><div class="ico">🛠️</div><div class="t">工具执行</div>
+          <div class="d">调用多种工具，获取准确结果</div></div>
+        <div class="cap"><div class="ico">🔄</div><div class="t">动态调整</div>
+          <div class="d">根据执行反馈，灵活调整计划</div></div>
+      </div>
 
-  <article class="hidden" id="planPanel">
-    <h3>任务清单</h3>
-    <div id="plan"></div>
-  </article>
+      <div class="card">
+        <h3>选择任务类型</h3>
+        <div class="grid3">
+          <div class="cap sel" data-type="github_analysis"><div class="ico">🐙</div>
+            <div class="t">GitHub 项目分析</div><div class="d">分析项目结构、技术栈、核心模块</div></div>
+          <div class="cap" data-type="learning_path"><div class="ico">📖</div>
+            <div class="t">技术资料学习规划</div><div class="d">制定学习路径、推荐学习资源</div></div>
+          <div class="cap" data-type="problem_solving"><div class="ico">🔧</div>
+            <div class="t">技术问题解决</div><div class="d">定位问题原因，提供解决方案</div></div>
+        </div>
+      </div>
 
-  <article class="hidden" id="hitlPanel">
-    <h3>⛔ 高危操作等待审批</h3>
-    <div id="hitlInfo" class="log"></div>
-    <div class="grid">
-      <button id="approve">✅ 批准执行</button>
-      <button id="reject" class="outline">🚫 拒绝</button>
+      <div class="card">
+        <h3>任务描述</h3>
+        <textarea id="goal" maxlength="2000"
+          placeholder="请根据你的任务类型描述目标，例如：&#10;分析这个 GitHub 项目的核心技术和架构设计……"></textarea>
+        <div class="counter"><span id="cnt">0</span>/2000</div>
+      </div>
+
+      <div class="card"><h3>高级选项</h3>
+        <label style="font-size:13.5px;display:flex;gap:8px;align-items:center">
+          <input type="checkbox" id="adaptive" checked> 自适应重规划（信息不足时自动补任务，
+          成本约 +59%；关闭则固定计划执行到底）
+        </label>
+      </div>
+
+      <button class="btn-big" id="start">🚀 开始规划</button>
+
+      <div class="card"><h3>系统状态</h3><div class="grid5" id="sysStats">
+        <div class="stat"><div class="n">-</div><div class="l">可用工具</div></div>
+        <div class="stat"><div class="n">-</div><div class="l">知识库文档</div></div>
+        <div class="stat"><div class="n">-</div><div class="l">记忆条目</div></div>
+        <div class="stat"><div class="n">-</div><div class="l">本次会话运行</div></div>
+        <div class="stat"><div class="n">-</div><div class="l">服务状态</div></div>
+      </div></div>
     </div>
-  </article>
 
-  <article class="hidden" id="logPanel">
-    <h3>执行流水</h3>
-    <div id="log" class="log"></div>
-  </article>
+    <!-- ═══ 视图二：运行界面 ═══ -->
+    <div class="view" id="v-run">
+      <div class="title-lg" id="runTitle">⏳ 任务执行中</div>
+      <div class="sub" id="runSub">正在为你执行任务，请稍候……</div>
 
-  <article class="hidden" id="answerPanel">
-    <h3>最终答案</h3>
-    <div id="answer" class="answer"></div>
-  </article>
-</main>
+      <div class="card">
+        <b style="font-size:14px" id="metaGoal"></b>
+        <div class="meta">
+          <span>模式：<b id="metaMode"></b></span>
+          <span>开始：<b id="metaStart"></b></span>
+          <span>已用时：<b id="metaElapsed">0s</b></span>
+        </div>
+        <div class="timeline" id="timeline"></div>
+      </div>
+
+      <div class="two">
+        <div class="card"><h3>执行计划</h3><div id="plan"></div></div>
+        <div class="card"><h3>实时执行日志</h3><div id="rlog" class="log"
+             style="max-height:300px;overflow-y:auto"></div></div>
+      </div>
+
+      <div class="two">
+        <div class="card"><h3>🧠 最新质检</h3><div id="evalCard" class="log">暂无</div></div>
+        <div class="card"><h3>🔧 最近工具调用</h3><div id="toolCard" class="log">暂无</div></div>
+      </div>
+
+      <div class="hitl-box hidden" id="hitlBox">
+        <b>⛔ 高危操作等待审批</b>
+        <div id="hitlInfo" class="log" style="margin:8px 0"></div>
+        <div class="toolbar" style="margin:0">
+          <button id="approve">✅ 批准执行</button>
+          <button id="reject">🚫 拒绝</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- ═══ 视图三：结束界面 ═══ -->
+    <div class="view" id="v-done">
+      <div class="title-lg" id="doneTitle">✅ 任务执行完成！</div>
+      <div class="sub" id="doneSub">所有任务已成功完成</div>
+      <div class="toolbar">
+        <button id="dlReport">📥 下载运行报告</button>
+        <button onclick="showStart()">🆕 新建任务</button>
+      </div>
+      <div class="card"><h3>最终答案</h3><pre class="wrap" id="answer"></pre></div>
+      <div class="card"><h3>执行统计</h3>
+        <div class="grid5" id="doneStats"></div>
+      </div>
+      <div class="card"><h3>任务终态</h3><div id="donePlan"></div></div>
+    </div>
+  </main>
+</div>
 
 <script>
 const $ = id => document.getElementById(id);
-let runId = null, es = null;
+const STEPS = ["拆解规划", "工具执行", "结果整合", "生成报告"];
+const NODE2STEP = { planner: 0, executor: 1, evaluator: 1, human_gate: 1,
+                    replanner: 1, final_answer: 2 };
+let runId = null, es = null, curStep = -1, t0 = 0, timer = null, lastObs = null;
 
-function log(line) {
-  $("logPanel").classList.remove("hidden");
-  $("log").textContent += line + "\n";
-  $("log").scrollTop = $("log").scrollHeight;
+/* ── 视图切换 ── */
+function show(id) {
+  document.querySelectorAll(".view").forEach(v => v.classList.remove("on"));
+  $(id).classList.add("on");
+  document.querySelectorAll(".nav")[0].classList.toggle("active", id === "v-start");
+}
+function showStart() { show("v-start"); loadStats(); }
+function showRun(goal) {
+  show("v-run");
+  $("runTitle").textContent = "⏳ 任务执行中";
+  $("metaGoal").textContent = goal;
+  $("metaMode").textContent = $("adaptive").checked ? "自适应重规划" : "固定计划";
+  $("metaStart").textContent = new Date().toLocaleString("zh", {hour12: false});
+  t0 = Date.now();
+  timer = setInterval(() =>
+    $("metaElapsed").textContent = Math.floor((Date.now() - t0) / 1000) + "s", 500);
+  renderTimeline(0, 0);
+}
+function renderTimeline(cur, doneCount) {
+  $("timeline").innerHTML = STEPS.map((s, i) => {
+    const cls = i < cur ? "done" : (i === cur ? "cur" : "");
+    const ico = i < cur ? "✓" : (i + 1);
+    return `<div class="step ${cls}"><div class="dot">${ico}</div>${s}</div>`;
+  }).join("");
 }
 
-async function refreshSnapshot() {          // 拉最新白板：刷新任务清单与流水状态
+/* ── 开始界面 ── */
+document.querySelectorAll("[data-type]").forEach(c => c.onclick = () => {
+  document.querySelectorAll("[data-type]").forEach(x => x.classList.remove("sel"));
+  c.classList.add("sel");
+});
+$("goal").addEventListener("input", e => $("cnt").textContent = e.target.value.length);
+
+async function loadStats() {
+  try {
+    const s = await (await fetch("/api/stats")).json();
+    const tiles = $("sysStats").children;
+    tiles[0].querySelector(".n").textContent = s.tools;
+    tiles[1].querySelector(".n").textContent = s.knowledge_docs;
+    tiles[2].querySelector(".n").textContent = s.memories;
+    tiles[3].querySelector(".n").textContent = s.runs;
+    tiles[4].querySelector(".n").textContent = "🟢 正常";
+  } catch { $("sysStats").children[4].querySelector(".n").textContent = "🔴 离线"; }
+}
+
+$("start").onclick = async () => {
+  const goal = $("goal").value.trim();
+  if (!goal) return alert("先填写任务描述");
+  $("start").disabled = true;
+  showRun(goal);
+  const r = await fetch("/api/runs", {
+    method: "POST", headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ goal, adaptive: $("adaptive").checked })
+  }).then(x => x.json());
+  runId = r.run_id;
+  log("🚀 已启动 run_id = " + runId);
+
+  es = new EventSource(`/api/runs/${runId}/events`);
+  es.addEventListener("node_update", e => {
+    const node = JSON.parse(e.data).node;
+    if (NODE2STEP[node] !== undefined && node !== "executor") curStep = NODE2STEP[node];
+    if (node === "executor" && curStep < 1) curStep = 1;
+    renderTimeline(curStep, 0);
+    refreshSnapshot();
+  });
+  es.addEventListener("hitl_request", e => {
+    const d = JSON.parse(e.data);
+    $("hitlBox").classList.remove("hidden");
+    $("hitlInfo").textContent = `任务 ${d.task_id} 请求执行 execute_python，代码：${d.code || "(见任务描述)"}`;
+  });
+  es.addEventListener("hitl_resolved", e => {
+    $("hitlBox").classList.add("hidden");
+    log((JSON.parse(e.data).approved ? "✅ 审批通过" : "🚫 已拒绝") + "，任务继续");
+  });
+  es.addEventListener("final", e => {
+    clearInterval(timer);
+    es.close();
+    finish(e.data);
+  });
+  es.addEventListener("error", e => {
+    log("❌ " + (e.data || "连接中断")); refreshSnapshot();
+  });
+};
+
+/* ── 运行界面渲染 ── */
+function log(line) {
+  const ts = new Date().toLocaleTimeString("zh", {hour12: false});
+  const box = $("rlog");
+  box.innerHTML += `<div class="logline"><span class="ts">${ts}</span><span>${line}</span></div>`;
+  box.scrollTop = box.scrollHeight;
+}
+
+async function refreshSnapshot() {
   const r = await fetch(`/api/runs/${runId}`);
   if (!r.ok) return;
   const { status, state } = await r.json();
   if (state.plan) {
-    $("planPanel").classList.remove("hidden");
-    $("plan").innerHTML = state.plan.map(t =>
-      `<div class="task ${t.status}">[${t.status}] ${t.id} · ${t.tool || "-"}｜${t.description}</div>`
-    ).join("");
+    $("plan").innerHTML = state.plan.map(t => {
+      const cls = {completed: "b-done", failed: "b-fail", running: "b-run"}.get(t.status) || "b-wait";
+      const txt = {completed: "已完成", failed: "已失败", running: "执行中"}.get(t.status) || "待执行";
+      return `<div class="task"><span class="no">${t.id}</span><span>${t.description}</span>
+              <span class="badge ${cls}">${txt}</span></div>`;
+    }).join("");
   }
-  if (state.observations) {
-    $("logPanel").classList.remove("hidden");
-    $("log").textContent = state.observations.map(o =>
-      `${o.success ? "√" : "X"} [${o.task_id}] ${o.tool}：${o.error || (o.summary || "").slice(0, 80)}`
-    ).join("\n");
+  const obs = state.observations || [];
+  if (obs.length) {
+    lastObs = obs[obs.length - 1];
+    const o = lastObs;
+    $("toolCard").innerHTML = `🔧 <b>${o.tool}</b> ${o.success ? "✅ 成功" : "❌ 失败"}
+      <br>耗时：${o.latency_ms} ms<br>${o.error ? "错误：" + o.error
+      : "输出：" + (o.summary || "").slice(0, 100) + "…"}`;
   }
-  $("statusPanel").textContent = "状态：" + status;
+  const ev = state.evaluation;
+  $("evalCard").textContent = ev ? `${ev.success ? "✅ 意图达成" : "⚠️ 未达成"}：${ev.reason}` : "暂无";
+  $("runSub").textContent = `已完成 ${state.current_task || 0} / ${state.plan.length || "?"} 个任务`;
 }
 
-function start() {
-  const goal = $("goal").value.trim();
-  if (!goal) return alert("先输入目标");
-  $("start").disabled = true;
-  ["planPanel", "answerPanel"].forEach(p => $(p).classList.add("hidden"));
-  $("plan").innerHTML = ""; $("log").textContent = ""; $("answer").textContent = "";
-
-  fetch("/api/runs", {
-    method: "POST", headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ goal, adaptive: $("adaptive").checked })
-  }).then(r => r.json()).then(({ run_id }) => {
-    runId = run_id;
-    log("🚀 已启动 run_id = " + run_id);
-    es = new EventSource(`/api/runs/${run_id}/events`);
-    es.addEventListener("node_update", () => refreshSnapshot());
-    es.addEventListener("hitl_request", e => {
-      const d = JSON.parse(e.data);
-      $("hitlPanel").classList.remove("hidden");
-      $("hitlInfo").textContent = `任务 ${d.task_id} 请求执行 execute_python，代码：${d.code || "(见任务描述)"}`;
-    });
-    es.addEventListener("hitl_resolved", () => $("hitlPanel").classList.add("hidden"));
-    es.addEventListener("final", e => {
-      $("answerPanel").classList.remove("hidden");
-      $("answer").textContent = e.data;
-      refreshSnapshot();
-      es.close(); $("start").disabled = false;
-    });
-    es.addEventListener("error", e => {
-      log("❌ " + (e.data || "连接中断")); refreshSnapshot();
-    });
+function finish(answer) {
+  fetch(`/api/runs/${runId}`).then(r => r.json()).then(({ state }) => {
+    const obs = state.observations || [];
+    const ok = obs.filter(o => o.success).length;
+    const total = state.plan.length || 1;
+    const doneN = state.plan.filter(t => t.status === "completed").length;
+    $("doneTitle").textContent = state.status === "done"
+      ? "✅ 任务执行完成！" : "⚠️ 任务已结束（部分未完成）";
+    $("doneSub").textContent = state.status === "done"
+      ? "所有任务已成功完成" : "存在未完成任务，详见任务终态";
+    $("answer").textContent = answer || "(无最终答案)";
+    $("doneStats").innerHTML = [
+      [obs.length, "工具调用"], [ok, "执行成功"],
+      [total, "计划任务"], [state.replan_count || 0, "动态调整"],
+      [Math.round(doneN / total * 100) + "%", "任务完成度"]
+    ].map(([n, l]) => `<div class="stat"><div class="n">${n}</div><div class="l">${l}</div></div>`).join("");
+    $("donePlan").innerHTML = state.plan.map(t => {
+      const cls = {completed: "b-done", failed: "b-fail"}.get(t.status) || "b-wait";
+      const txt = {completed: "已完成", failed: "已失败"}.get(t.status) || "待执行";
+      return `<div class="task"><span class="no">${t.id}</span><span>${t.description}</span>
+              <span class="badge ${cls}">${txt}</span></div>`;
+    }).join("");
+    show("v-done");
+    $("start").disabled = false;
   });
 }
+
+$("dlReport").onclick = () => {
+  fetch(`/api/runs/${runId}`).then(r => r.json()).then(snap => {
+    const blob = new Blob([JSON.stringify(snap, null, 1)], {type: "application/json"});
+    const a = document.createElement("a");
+    a.href = URL.createObjectURL(blob);
+    a.download = `report-${runId}.json`;
+    a.click();
+  });
+};
 
 function decide(approved) {
   fetch(`/api/runs/${runId}/approvals`, {
@@ -123,10 +380,11 @@ function decide(approved) {
     body: JSON.stringify({ approved })
   });
 }
-
-$("start").onclick = start;
 $("approve").onclick = () => decide(true);
 $("reject").onclick = () => decide(false);
+
+$("goal").addEventListener("keydown", e => { if (e.key === "Enter" && e.ctrlKey) $("start").click(); });
+showStart();
 </script>
 </body>
 </html>

@@ -149,6 +149,24 @@ async def events(run_id: str):
     return StreamingResponse(gen(), media_type="text/event-stream")
 
 
+@app.get("/api/stats")
+def stats():
+    """开始页系统状态瓷砖：工具数 / 笔记数 / 记忆条数 / 会话运行数"""
+    import sqlite3
+
+    from app.memory.store import KNOWLEDGE_DIR
+    from app.tools.registry import TOOL_REGISTRY
+
+    docs = len(list(KNOWLEDGE_DIR.glob("*.md")))
+    try:
+        mem = sqlite3.connect("memory.sqlite").execute(
+            "SELECT COUNT(*) FROM memories").fetchone()[0]
+    except Exception:
+        mem = 0
+    return {"tools": len(TOOL_REGISTRY), "knowledge_docs": docs,
+            "memories": mem, "runs": len(RUNS)}
+
+
 @app.get("/")
 def index():
     return FileResponse(STATIC / "index.html")
