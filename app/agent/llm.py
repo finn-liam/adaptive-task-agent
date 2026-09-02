@@ -1,5 +1,5 @@
 """模型供应商单点封装 + 全局 token 记账"""
-import os                                  
+import os
 import threading
 
 from dotenv import load_dotenv

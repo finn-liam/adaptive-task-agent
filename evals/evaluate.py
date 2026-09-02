@@ -22,9 +22,12 @@ def load_pass(dirs):
                  if jf.exists() else {"success": False, "coverage": 0.0})
             plan = t.get("task_statuses", [])
             done = sum(1 for p in plan if p["status"] == "completed")
+            obs = t.get("observations", [])
             rows.append({"case_id": t["case_id"],
                          "success": bool(j.get("success")),
                          "plan_completion": (done / len(plan)) if plan else 0.0,
+                         "tool_calls": len(obs),
+                         "tool_ok": sum(1 for o in obs if o["success"]),
                          "steps": t.get("steps", 0),
                          "retry": t.get("retry_count", 0),
                          "replan": t.get("replan_count", 0),
@@ -37,9 +40,11 @@ def load_pass(dirs):
 
 def metrics(rows):
     n = len(rows)
+    calls = sum(r["tool_calls"] for r in rows)
     return {"runs": n,
             "success_rate": sum(r["success"] for r in rows) / n,
             "plan_completion": sum(r["plan_completion"] for r in rows) / n,
+            "tool_accuracy": (sum(r["tool_ok"] for r in rows) / calls) if calls else 0.0,
             "retry_rate": sum(1 for r in rows if r["retry"] > 0) / n,
             "replan_rate": sum(1 for r in rows if r["replan"] > 0) / n,
             "avg_steps": sum(r["steps"] for r in rows) / n,
@@ -65,16 +70,17 @@ def main():
     lines = [
         "# W5 评测报告：Fixed vs Adaptive Planning",
         "",
-        f"- 模型：deepseek-chat（服务端实测回显 DeepSeek-V4-Flash 非思考模式）",
-        f"- 数据集：100 条（3 类任务 × 3 难度，含 13 道必败/对抗题）",
-        f"- 每种模式各跑 2 遍取均值；judge 为同模型 rubric 覆盖率法（阈值 0.6），",
-        f"  经 20 份盲测人工校准，一致率 85%（≥80% 门槛）",
+        "- 模型：deepseek-chat（服务端实测回显 DeepSeek-V4-Flash 非思考模式）",
+        "- 数据集：100 条（3 类任务 × 3 难度，含 13 道必败/对抗题）",
+        "- 每种模式各跑 2 遍取均值；judge 为同模型 rubric 覆盖率法（阈值 0.6），",
+        "  经 20 份盲测人工校准，一致率 85%（≥80% 门槛）",
         "",
         "## 主对比表（两遍均值）",
         "",
         "| 指标 | Fixed | Adaptive | 差异 |",
         "|---|---|---|---|",
         f"| Task Success Rate | {f['success_rate']:.0%} | {a['success_rate']:.0%} | **{lift:+.0f}pp** |",
+        f"| Tool Call Accuracy | {f['tool_accuracy']:.0%} | {a['tool_accuracy']:.0%} | — |",
         f"| Plan Completion Rate | {f['plan_completion']:.0%} | {a['plan_completion']:.0%} | — |",
         f"| Retry Rate（含重试的 run 占比） | {f['retry_rate']:.0%} | {a['retry_rate']:.0%} | — |",
         f"| Re-plan Rate | {f['replan_rate']:.0%} | {a['replan_rate']:.0%} | — |",
@@ -106,7 +112,7 @@ def main():
         lines += cal.read_text(encoding="utf-8").splitlines()
     Path("docs").mkdir(exist_ok=True)
     Path("docs/experiments.md").write_text("\n".join(lines) + "\n", encoding="utf-8")
-    print(f"\n报告已写入：docs/experiments.md")
+    print("\n报告已写入：docs/experiments.md")
 
 
 if __name__ == "__main__":

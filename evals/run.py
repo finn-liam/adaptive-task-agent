@@ -14,9 +14,9 @@ from app.agent import llm as llm_mod
 from app.agent.graph import build_graph
 
 DATASET = Path("evals/dataset.jsonl")
-INIT_KEYS = dict(plan=[], current_task=0, retry_count=0, replan_count=0,
-                 observations=[], evaluation=None, pending_approval=None,
-                 final_answer="", status="planning")
+INIT_KEYS = {"plan": [], "current_task": 0, "retry_count": 0, "replan_count": 0,
+             "observations": [], "evaluation": None, "pending_approval": None,
+             "final_answer": "", "status": "planning"}
 
 
 def invoke_once(payload, config):
@@ -83,7 +83,7 @@ def main():
     cases = [json.loads(l) for l in DATASET.read_text(encoding="utf-8").splitlines() if l.strip()]
     cases = cases[args.offset: args.offset + args.limit if args.limit else None]
 
-    stamp = datetime.now().strftime("%m%d-%H%M")
+    stamp = datetime.now().astimezone().strftime("%m%d-%H%M")
     outdir = Path(f"results/{stamp}-{args.mode}" + (f"-{args.tag}" if args.tag else ""))
     outdir.mkdir(parents=True, exist_ok=True)
     print(f"评测开始：{len(cases)} 条｜模式 {args.mode}｜并发 {args.workers}｜输出 {outdir}")

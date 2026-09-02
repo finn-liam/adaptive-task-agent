@@ -82,7 +82,7 @@ def score():
             problems.append(case_id)
             continue
         k = key[idx]
-        notes = re.search(r"\*\*备注\*\*：\n?(.*)", sec, re.S)
+        notes = re.search(r"\*\*备注\*\*：\n?(.*)", sec, re.DOTALL)
         rows.append({"idx": idx, "case_id": case_id, "dir": k["dir"],
                      "judge_success": k["judge_success"],
                      "judge_coverage": k["judge_coverage"],
@@ -100,7 +100,7 @@ def score():
     dis = [r for r in rows if r["human_success"] != r["judge_success"]]
     rate = len(agree) / len(rows)
 
-    print(f"\n===== 盲测校准报告（{datetime.now().strftime('%Y-%m-%d')}）=====")
+    print(f"\n===== 盲测校准报告（{datetime.now().astimezone().strftime('%Y-%m-%d')}）=====")
     print(f"样本：{len(rows)} 份（种子 2026，judge 判定隐藏）")
     print(f"人机一致率：{len(agree)}/{len(rows)} = {rate:.0%}")
     print(f"门槛 80%：{'✅ 达标，judge 可信' if rate >= 0.8 else '❌ 未达标，需修 judge 后重新校准'}")

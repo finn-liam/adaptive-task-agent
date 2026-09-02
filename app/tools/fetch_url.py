@@ -14,6 +14,9 @@ NOISE_TAGS = ("script", "style", "nav", "header", "footer", "aside", "noscript")
 
 def fetch_url(url: str) -> str:
     resp = httpx.get(url, headers=HEADERS, timeout=30, follow_redirects=True)
+
+    if resp.status_code != 200:
+        raise RuntimeError(f"HTTP {resp.status_code}: {url}")
     ctype = resp.headers.get("content-type", "")
     if ctype.startswith("application/json"):
         return resp.text[:5000]      # JSON API 直接返回原文——LLM 调结构化接口是合理行为
