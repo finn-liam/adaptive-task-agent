@@ -24,7 +24,8 @@ PLANNER_PROMPT = """
     search_github → {"action": "search", "query": "关键词"}（拉取 README 时用 {"action": "readme", "repo": "owner/仓库名"}）
     read_file → {"path": "项目内相对路径"}
     execute_python → {"code": "单个纯算术表达式"}——只许一个表达式，
-    search_knowledge → {"query": "关键词"}——检索自己的学习笔记库
+    search_knowledge → {"query": "关键词"}——只检索你自己的工程笔记（本项目怎么做的），
+    互联网上的通用技术知识必须用 search_web
     save_memory → {"content": "要记住的一句话"}——写入长期记忆
     禁止赋值语句、禁止 print、禁止多行；它只能算数，不能搜索或读文件。
 
