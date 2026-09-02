@@ -84,7 +84,7 @@ def _execute(run_id: str, goal: str, adaptive: bool):
                 RUNS[run_id]["status"] = "done"
                 _emit(run_id, "final", RUNS[run_id]["state"].get("final_answer", ""))
                 return
-            next_input = Command(resume={"approved": RUNS[run_id].get("approved", False)})
+            next_input = Command(resume={"approved": approved})
 
         RUNS[run_id]["status"] = "failed"
         _emit(run_id, "error", "审批循环超出上限")

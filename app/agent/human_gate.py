@@ -12,10 +12,10 @@ def human_gate_node(state: AgentState) -> dict:
     answer = interrupt({
         "task_id":task.id,
         "question": f"任务{task.id}请求执行高风险工具execute_python",
-        "code": (task.tool_args or {}.get("code","")),
+        "code": ((task.tool_args or {}).get("code", "")),
     })
 
-    approved = bool(answer.get("approval"))
+    approved = bool(answer.get("approved"))
 
     if approved:
         obs = run_tool(task.tool, {**(task.tool_args or {}), "task_id": task.id})
