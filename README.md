@@ -16,20 +16,7 @@
 
 ## 架构
 
-```mermaid
-graph TB
-    U["用户 / 浏览器"] -->|"HTTP + SSE"| API["FastAPI 薄壳"]
-    API --> G["LangGraph 编排"]
-    subgraph SG["LangGraph 图"]
-        P["Planner"] --> E["Executor"] --> EV["Evaluator"] --> R{"route"}
-        R -->|"缺口"| RP["Replanner"] --> E
-        R -->|"通过"| E
-        R -->|"完成"| F["FinalAnswer"]
-    end
-    G -. "快照" .-> CP[("Checkpointer：Postgres / SQLite")]
-    G -. "经验 / 笔记" .-> M[("Memory：SQLite + BM25")]
-    G --> T["Tools：search_web · fetch_url · search_github · read_file · search_knowledge · save_memory · execute_python（HITL）"]
-```
+![系统架构图](docs/architecture.png)
 
 ## 评测结果（100 条数据集，每模式 2 遍取均值）
 
