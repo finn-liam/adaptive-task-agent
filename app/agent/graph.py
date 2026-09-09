@@ -81,8 +81,8 @@ def build_graph(checkpointer=None):
     )
     g.add_edge("final_answer", END)
 
-    # —— W4-2 断点恢复 / W6 Postgres 切换 ——
-    # 默认 SQLite 文件库；容器部署时由环境变量切换 PostgresSaver（决策 D3）
+    #compile 相当于把 6 个节点 + 边 + 记录仪打包成可运行的图对象。
+    # 从此图每跑一步，记录仪自动干活——任何节点代码都看不见它，
     if checkpointer is None:
         checkpointer = _default_checkpointer()
     return g.compile(checkpointer=checkpointer)  # 挂上"行车记录仪"再出厂

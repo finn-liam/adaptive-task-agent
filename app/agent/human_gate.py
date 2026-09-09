@@ -8,7 +8,8 @@ from app.tools.base import run_tool
 
 def human_gate_node(state: AgentState) -> dict:
     task = state["pending_approval"]
-
+# interrupt 冻结程序，返回main中，发出answer，等待ans = input("允许执行？[y/n] >") == 获取{"approved": True}
+# 重新执行human_gate_node，这次answer = {"approved": True}获得了值
     answer = interrupt({
         "task_id":task.id,
         "question": f"任务{task.id}请求执行高风险工具execute_python",
