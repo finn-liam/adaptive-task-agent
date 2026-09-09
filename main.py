@@ -14,8 +14,11 @@ from app.agent.graph import build_graph
 
 
 def run_graph(payload,config):
+    # payload:初始化白板，传入的是initial_state,config传入的是langgraph中固定的 {"configurable": {"thread_id": run_id}}
+    # configurable是用户自定义区。外层config是保留槽。thread_id 是checkpoint（sqlitesaver）约定来找这个区里找的钥匙
     """带审批循环的发车器：图暂停 → 问人 → Command(resume) 回注 → 直到跑完"""
     while True:
+        # invoke = “循环喊节点干活直到 END”的调度循环
         result = build_graph().invoke(payload,config)
         if not result.get("__interrupt__"):
             return result
@@ -24,7 +27,9 @@ def run_graph(payload,config):
         print(f"   任务：{task.description}")
         print(f"   代码：{(task.tool_args or {}).get('code', '(见任务描述)')}")
         ans = input("允许执行？[y/n] >").strip().lower()
-        payload = Command(resume = {"approval":ans == "y"})
+        # {"approved": ans == "y"} == {"approved": True}
+        # graph中的类，（）代表造一个指令对象，只填 resume 槽，槽里放这个字典。指令：恢复暂停的图，把这个值投递给 interrupt()
+        payload = Command(resume={"approved": ans == "y"})
 def main():
     parser = argparse.ArgumentParser(description="Adaptive Task Planning Agent")
     parser.add_argument("goal", nargs="?", default="",
