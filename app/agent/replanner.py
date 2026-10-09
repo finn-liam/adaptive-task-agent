@@ -69,10 +69,25 @@ def replanner_node(state: AgentState) -> dict:
             t.status = "completed"
         else:
             t.status = "pending"        # 其余（失败/新增/被改的）一律重置为待执行
+
+    # —— 合同校验（LLM 输出不可信，教训：第3次重规划曾为凑"≤8个"把已完成 t1~t4 全删，
+    #    新增任务还依赖被删的 id，executor 的 next() 当场 StopIteration 炸掉整条 run）——
+    # ① 已完成任务必须原样保留：模型违约删掉的，从旧计划补回（status=completed，不会被重新执行）
+    new_ids = {t.id for t in new_plan.tasks}
+    lost_completed = [t for t in plan if t.status == "completed" and t.id not in new_ids]
+    if lost_completed:
+        new_plan.tasks.extend(lost_completed)
+        print(f"模型漏掉 {len(lost_completed)} 个已完成任务，已补回：{[t.id for t in lost_completed]}")
+    # ② depends_on 只准引用计划里现存的 id，悬空引用剔除——executor 的名册检查才不会跳过正常任务
+    valid_ids = {t.id for t in new_plan.tasks}
+    for t in new_plan.tasks:
+        if any(d not in valid_ids for d in t.depends_on):
+            t.depends_on = [d for d in t.depends_on if d in valid_ids]
+
 # 增加新任务。
     added = [t.id for t in new_plan.tasks if t.id not in old_status]
 
-    print(f"\n🛠️  第{state["replan_count"]+1}次重规划 | 新增{added or "无"} | {new_plan.reasoning[:60]}")
+    print(f"\n第{state["replan_count"]+1}次重规划 | 新增{added or "无"} | {new_plan.reasoning[:60]}")
 
     pending_idx = next(
         (i for i, t in enumerate(new_plan.tasks) if t.status == "pending"),
