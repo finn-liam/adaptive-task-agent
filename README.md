@@ -2,7 +2,7 @@
 
 > 面向复杂技术任务的可动态重规划 Agent：任务拆解 → 工具执行 → 状态评估 → 动态重规划 → 断点恢复 → 人工审批，附带 100 条评测集的 Fixed vs Adaptive 对照实验。
 
-**技术栈**：Python · LangGraph · DeepSeek（OpenAI 兼容）· Pydantic · FastAPI + SSE · PostgreSQL · Docker · pytest
+**技术栈**：Python · LangGraph · DeepSeek（OpenAI 兼容）· Pydantic · SQLite/PostgreSQL（Checkpointer）· pytest
 
 ## 它解决什么问题
 
@@ -36,34 +36,12 @@ Adaptive 的价值是**保险而非免费午餐**：收益集中在"首拆计划
 
 ## 快速开始
 
-### 方式一：Docker（推荐，含 PostgreSQL）
-
 ```bash
-# 1. 准备 .env（三把钥匙）
-cat > .env << 'EOF'
-DEEPSEEK_API_KEY=sk-xxx
-GITHUB_TOKEN=github_pat_xxx
-TAVILY_API_KEY=tvly-xxx
-EOF
-
-# 2. 一条命令起全套（API + PostgreSQL）
-docker compose up --build
-
-# 3. 打开 Web 界面
-# http://127.0.0.1:8000
-```
-
-### 方式二：本地开发（uv + SQLite）
-
-```bash
+# 1. 装依赖 + 准备钥匙
 uv sync
-cp .env.example .env    # 填入三把钥匙
-uv run uvicorn app.api.main:app --port 8000
-```
+cp .env.example .env    # 填入三把钥匙（DEEPSEEK_API_KEY / GITHUB_TOKEN / TAVILY_API_KEY）
 
-### 命令行模式（无需浏览器）
-
-```bash
+# 2. 终端运行
 uv run python main.py "分析 langchain-ai/langgraph 仓库并找中文教程"
 
 # 中断后恢复（Checkpoint 断点续跑）
@@ -108,8 +86,7 @@ app/
 ├── agent/     # planner / executor / evaluator / replanner / human_gate / final_answer / graph
 ├── tools/     # 注册表 + run_tool 包装器 + 7 个工具实现
 ├── models/    # Pydantic 数据模型（Task/Observation/EvaluationResult/Plan/AgentState）
-├── memory/    # save_memory + search_knowledge（BM25）
-└── api/       # FastAPI + SSE + 静态 UI
+└── memory/    # save_memory + search_knowledge（BM25）
 evals/         # 数据集 / runner / judge / 校准 / 指标
 docs/          # devlog（六周实录）/ experiments.md（评测报告）/ traces
 ```
