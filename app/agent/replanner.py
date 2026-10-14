@@ -14,6 +14,9 @@ REPLAN_PROMPT = """你是重规划专家，一个执行中的计划遇到了信�
 质量判断：{reason}
 信息缺口：{missing}
 
+用户中途补充指示（最高优先级，新增/修改任务应优先服务于此）：
+{user_update}
+
 修改约束(全部必须遵守):
 1. 已完成任务(√)原样保留: id、descriptions、tool、tool_args 一字不改;
 2. 只允许新增任务，或修改失败/待执行任务;
@@ -43,6 +46,7 @@ def replanner_node(state: AgentState) -> dict:
                 .replace("{plan_view}", "\n".join(lines))
                 .replace("{reason}", ev.reason)
                 .replace("{missing}", ev.missing_info or ev.reason)
+                .replace("{user_update}", state.get("user_update") or "（无）")
     )
 
     base_prompt = prompt
@@ -105,4 +109,5 @@ def replanner_node(state: AgentState) -> dict:
         "replan_count": state["replan_count"] + 1,
         "current_task": pending_idx,
         "status": "executing",
+        "user_update": None,        # 指示已消化进新计划，清空防止同一条消息反复触发重规划
     }

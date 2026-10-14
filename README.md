@@ -2,7 +2,7 @@
 
 > 面向复杂技术任务的可动态重规划 Agent：任务拆解 → 工具执行 → 状态评估 → 动态重规划 → 断点恢复 → 人工审批，附带 100 条评测集的 Fixed vs Adaptive 对照实验。
 
-**技术栈**：Python · LangGraph · DeepSeek（OpenAI 兼容）· Pydantic · SQLite/PostgreSQL（Checkpointer）· pytest
+**技术栈**：Python · LangGraph · DeepSeek（OpenAI 兼容）· Pydantic · SQLite/PostgreSQL（Checkpointer）· prompt_toolkit · pytest
 
 ## 它解决什么问题
 
@@ -44,9 +44,30 @@ cp .env.example .env    # 填入三把钥匙（DEEPSEEK_API_KEY / GITHUB_TOKEN /
 # 2. 终端运行
 uv run python main.py "分析 langchain-ai/langgraph 仓库并找中文教程"
 
+# 交互会话（排队消息 / 两段式 Ctrl-C / 可编辑重发，见下节）
+uv run python main.py
+
 # 中断后恢复（Checkpoint 断点续跑）
 uv run python main.py --resume <run_id>
 ```
+
+## 交互模式：排队消息与两段式中断
+
+不带目标启动即进入交互会话，三个交互承诺：
+
+1. **输入排队**：agent 干活时打字不会被发出、也不会丢——进入队列，在下一个节点边界
+   投递为 `user_update`，由 replanner 并入计划（**不打断也能转向**）；
+2. **两段式 Ctrl-C**：第一次停在**当前节点之后**（SqliteSaver 已落盘快照，等价
+   `--resume` 的断点语义），2 秒窗口内第二次退出整个进程；
+3. **可编辑重发**：软停后，排队消息预填进编辑框，改完回车经 `Command(update=...)`
+   注入白板；直接回车则从断点原样继续。
+
+如实声明边界：进行中的 LLM/HTTP 调用无法中途取消（同步栈），软停在节点边界生效，
+调用时长由 httpx 超时兜底；用户指示触发重规划同样受 3 次熔断保护。
+
+实现一句话：prompt_toolkit 常驻输入行（`patch_stdout` 保证 worker 线程的进度打印
+不打碎输入行）+ asyncio 主循环；图在 `asyncio.to_thread` 的 worker 线程里由
+`run_stream` 逐节点消费，软中断旗（`threading.Event`）只在节点边界被检查。
 
 ### 跑评测（复现实验）
 
@@ -67,6 +88,7 @@ uv run python -m evals.evaluate                # 生成对比报告
 | Checkpointer | SQLite → Postgres 渐进 | 一开始就 PG | 同一接口零逻辑替换，验证了抽象 |
 | 记忆检索 | BM25 + jieba | 向量数据库 | 可解释、零基础设施；语义检索留给 RAG 项目 |
 | HITL | interrupt + 人工否决终审 | 自动放行 | 人的否决必须是终审，否则审批是橡皮图章 |
+| 交互层 | prompt_toolkit + asyncio 会话 | 裸 input() + 线程 | 排队消息与预填重发是交互核心，值得一个依赖 |
 | 评估 | rubric + LLM-as-judge + 盲测校准 | 精确匹配 | 生成类任务没有唯一正确答案 |
 
 完整决策记录（D1~D9）与风险预案见开发过程文档。
@@ -83,9 +105,10 @@ uv run python -m evals.evaluate                # 生成对比报告
 
 ```
 app/
-├── agent/     # planner / executor / evaluator / replanner / human_gate / final_answer / graph
+├── agent/     # planner / executor / evaluator / replanner / human_gate / final_answer / graph / runner
 ├── tools/     # 注册表 + run_tool 包装器 + 7 个工具实现
 ├── models/    # Pydantic 数据模型（Task/Observation/EvaluationResult/Plan/AgentState）
+├── ui/        # 交互会话（排队消息 / 两段式 Ctrl-C / 可编辑重发）
 └── memory/    # save_memory + search_knowledge（BM25）
 evals/         # 数据集 / runner / judge / 校准 / 指标
 docs/          # devlog（六周实录）/ experiments.md（评测报告）/ traces

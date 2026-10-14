@@ -318,3 +318,47 @@ Fixed 的问题不是执行不行，是计划一开始就没铺够，而且中�
 
 问：你的实验结论是什么？
 答：（见上面"最重要的领悟"，三层：边界/代价/保险定位 + 数字）
+
+# W7 —— 交互周：排队消息与两段式中断（对标 hermes 的终端体验）
+
+## 本周加了什么
+
+把一次性 CLI 升级成交互会话（app/ui/session.py），三个交互承诺：
+
+- **输入排队**：agent 干活时打字不发出也不丢，进队列；下一个节点边界投递为
+  user_update，由 replanner 并入计划——"不打断也能转向"；
+- **两段式 Ctrl-C**：第一次停在当前节点之后（checkpoint 已落盘，等价 --resume 的
+  断点语义），2 秒窗口内第二次退出整个进程；
+- **可编辑重发**：软停后排队消息预填进编辑框，改完回车经 Command(update=...)
+  注入白板；直接回车则从断点原样继续。
+
+## 关键实现决策
+
+- **线程模型**：主线程 asyncio 事件循环独占所有 prompt_async（目标/排队/审批/编辑）；
+  图在 asyncio.to_thread 的 worker 线程里由 run_stream 逐节点消费——invoke 换成
+  stream 的根本原因：节点边界是唯一能插手执行的位置；软中断旗 threading.Event
+  桥接两侧，worker 只在边界看旗。patch_stdout 保证 worker 的打印不打碎输入行。
+- **Command(update=...) 是注入通道**：读 langgraph 1.2 的 pregel/_loop.py 确认
+  Command 作为 stream 输入 = update 写白板 + 从断点继续。"编辑重发"与"不打断转向"
+  共用这一条通道，agent 侧只花了一个 AgentState 字段 + 路由分支 + replanner 提示词。
+- **路由优先级**：route_after_eval 里用户指示排在"跑完了→final"之前——否则收尾阶段
+  补充的新要求会被 final_answer 吞掉。3 次熔断对用户指示同样生效（防指示死循环）。
+
+## 本周的坑
+
+1. **两次 Ctrl-C 的交付时差**：第一次 Ctrl-C 被 prompt_toolkit 转成 KeyboardInterrupt，
+   但软停要到节点边界才生效；第二次若落在非 prompt 等待点，会以裸 KeyboardInterrupt
+   冒出 asyncio——必须在最外层兜住并 os._exit 硬退，否则 asyncio.run 的清理会等
+   worker 线程跑完当前节点才退，"立即退出"名存实亡。
+2. **软停旗残留**：Ctrl-C 后图恰好走到 human_gate——审批回答完 stop_event 还竖着，
+   续跑后第一个节点边界又停。修法：审批互动本身消费软停意图（答完即 clear）。
+3. **prompt 互斥**：排队输入、审批、编辑重发共用一个 PromptSession，同一时刻只能有
+   一个 prompt_async 在跑——进审批/软停前必须先 cancel 排队输入任务，再开新 prompt。
+
+## 面试问答演练
+
+问：为什么软中断停在节点边界，而不是立刻杀掉正在跑的调用？
+答：整条栈是同步的（LLM .invoke / httpx），立刻取消要么杀线程（状态不可知）要么全
+异步改造（成本不成比例）。节点边界 + checkpointer 是现成的安全网：停的位置必有快照，
+续跑就是 --resume 的同一条路；正在跑的调用由 httpx 超时兜底。第二次 Ctrl-C 的硬退是
+逃生门，靠的也是"节点级至少一次"——死在节点中间的，恢复后该节点从头重跑。

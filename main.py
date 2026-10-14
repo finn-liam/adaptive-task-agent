@@ -3,6 +3,9 @@
 W4-2 新增：
 - 每次运行都带 thread_id（=run_id）发车，LangGraph 自动把白板快照存进 checkpoints.sqlite；
 - --resume RUN_ID：不给新输入（invoke(None)），LangGraph 从该 run 的最近快照继续跑。
+
+W7 新增：
+- 无参数启动 = 交互会话（app/ui/session.py）：排队消息 / 两段式 Ctrl-C / 可编辑重发。
 """
 
 import argparse
@@ -10,19 +13,25 @@ import uuid
 
 from langgraph.types import Command
 
-from app.agent.graph import build_graph
+from app.agent.graph import build_graph, make_initial_state
+from app.agent.runner import AWAITING_APPROVAL, run_stream
 
 
 def run_graph(payload,config):
     # payload:初始化白板，传入的是initial_state,config传入的是langgraph中固定的 {"configurable": {"thread_id": run_id}}
     # configurable是用户自定义区。外层config是保留槽。thread_id 是checkpoint（sqlitesaver）约定来找这个区里找的钥匙
-    """带审批循环的发车器：图暂停 → 问人 → Command(resume) 回注 → 直到跑完"""
+    """带审批循环的发车器：图暂停 → 问人 → Command(resume) 回注 → 直到跑完
+
+    W7 起改用 run_stream 逐节点消费（与交互模式共用同一条执行底座），
+    一次性模式不传 stop_event/has_input，行为与原 invoke 循环等价。
+    """
+    graph = build_graph()
     while True:
-        # invoke = “循环喊节点干活直到 END”的调度循环
-        result = build_graph().invoke(payload,config)
-        if not result.get("__interrupt__"):
-            return result
-        task = result["pending_approval"]
+        status, _ = run_stream(graph, payload, config)
+        state = graph.get_state(config).values
+        if status != AWAITING_APPROVAL:
+            return state
+        task = state["pending_approval"]
         print("\n 高危操作等待审批")
         print(f"   任务：{task.description}")
         print(f"   代码：{(task.tool_args or {}).get('code', '(见任务描述)')}")
@@ -33,7 +42,7 @@ def run_graph(payload,config):
 def main():
     parser = argparse.ArgumentParser(description="Adaptive Task Planning Agent")
     parser.add_argument("goal", nargs="?", default="",
-                        help="要完成的复杂技术任务（--resume 恢复模式可省略）")
+                        help="要完成的复杂技术任务（省略则进入交互会话；--resume 恢复模式也可省略）")
     parser.add_argument("--fixed", action="store_true",
                         help="使用固定计划模式（不做重规划），W5 对照组用")
     parser.add_argument("--resume", metavar="RUN_ID",
@@ -45,29 +54,20 @@ def main():
         # invoke 的第一个参数是 None = "不给新输入"；
         # LangGraph 查到该 thread 的最近快照，从断掉的节点继续（节点级"至少一次"语义）
         run_id = args.resume
-        print(f"🔄 恢复 run {run_id}……\n")
+        print(f"恢复 run {run_id}……\n")
         result = run_graph(None, {"configurable": {"thread_id": run_id}})
+    elif not args.goal:
+        # —— 交互会话路线（W7）：无参数进入；排队消息 / 两段式 Ctrl-C / 可编辑重发
+        from app.ui.session import run_interactive
+
+        run_interactive(fixed=args.fixed)
+        return
     else:
         # —— 新车路线 ——
-        if not args.goal:
-            parser.error("新运行必须提供目标，例如：uv run python main.py \"你的目标\"")
         print(f"目标:{args.goal}（模式：{'固定' if args.fixed else '自适应'}）\n")
         run_id = uuid.uuid4().hex[:8]
         print(f"（本次 run_id：{run_id}，中断后可用 --resume {run_id} 复活）")
-        initial_state = {
-            "run_id": run_id,          # 必须和 thread_id 同源！快照归属全靠它对上号
-            "user_goal": args.goal,
-            "adaptive": not args.fixed,
-            "plan": [],
-            "current_task": 0,
-            "retry_count": 0,
-            "replan_count": 0,
-            "observations": [],
-            "evaluation": None,
-            "pending_approval": None,
-            "final_answer": "",
-            "status": "planning",
-        }
+        initial_state = make_initial_state(run_id, args.goal, adaptive=not args.fixed)
         result = run_graph(initial_state, {"configurable": {"thread_id": run_id}})
 
     print("任务清单")

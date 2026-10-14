@@ -34,6 +34,40 @@ def _default_checkpointer():
     return SqliteSaver(conn)
 
 
+def make_initial_state(run_id: str, goal: str, adaptive: bool = True) -> dict:
+    """新车白板：一次性 CLI 与交互会话共用同一份初始状态，防止两处各写一份漂移"""
+    return {
+        "run_id": run_id,          # 必须和 thread_id 同源！快照归属全靠它对上号
+        "user_goal": goal,
+        "adaptive": adaptive,
+        "plan": [],
+        "current_task": 0,
+        "retry_count": 0,
+        "replan_count": 0,
+        "observations": [],
+        "evaluation": None,
+        "pending_approval": None,
+        "user_update": None,       # 排队消息的投递口：中途指示从这里进白板，replanner 消费
+        "final_answer": "",
+        "status": "planning",
+    }
+
+
+def route_after_eval(state: AgentState) -> str:
+    # 用户中途指示优先于一切——排在"跑完了→final"之前，否则收尾阶段补充的新要求
+    # 会被 final_answer 直接吞掉；同样受 3 次熔断保护，防止指示反复触发死循环
+    if state.get("user_update") and state["replan_count"] < 3:
+        return "replan"
+    # 注意分支顺序（W3 教训）：缺口检查优先于"跑完了"——先填缺口，再谈收工
+    if (state["adaptive"]
+            and state["evaluation"].need_replan
+            and state["replan_count"] < 3):
+        return "replan"      # 三条件=自适应模式 + 质检说缺信息 + 熔断未触发
+    if state["current_task"] >= len(state["plan"]):
+        return "final"       # 指针到头，全部完成
+    return "next"            # 通过→下一个；失败不重规划→跳过继续
+
+
 def build_graph(checkpointer=None):
     # checkpointer 参数留了注入口：测试/服务化时可以注入别的存储器（W6 换 PostgresSaver 就是这里换）
     g = StateGraph(AgentState)  # AgentState：白板的说明书，声明整张图共享哪些格子
@@ -43,16 +77,6 @@ def build_graph(checkpointer=None):
         plan = make_planner()(state["user_goal"])
         print(f"规划依据:{plan.reasoning}\n")
         return {"plan": plan.tasks, "current_task": 0, "status": "executing"}
-
-    def route_after_eval(state: AgentState) -> str:
-        # 注意分支顺序（W3 教训）：缺口检查优先于"跑完了"——先填缺口，再谈收工
-        if (state["adaptive"]
-                and state["evaluation"].need_replan
-                and state["replan_count"] < 3):
-            return "replan"      # 三条件=自适应模式 + 质检说缺信息 + 熔断未触发
-        if state["current_task"] >= len(state["plan"]):
-            return "final"       # 指针到头，全部完成
-        return "next"            # 通过→下一个；失败不重规划→跳过继续
 
     def route_after_execute(state: AgentState) -> str:
         return "gate" if state.get("pending_approval") is not None else "evaluator"

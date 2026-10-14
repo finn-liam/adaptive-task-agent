@@ -74,6 +74,7 @@ class AgentState(TypedDict):
     observations: Annotated[list[Observation], operator.add]   # 节点各存各的，框架自动合并
     evaluation: EvaluationResult | None           # 最近一次评估结论
     pending_approval: Task | None                 # 等待人工审批的高危任务
+    user_update: str | None                       # 用户中途补充的指示（排队消息的投递口），replanner 消费后清空
     final_answer: str                             # 最终答案
     status: Literal[
         "planning", "executing", "evaluating", "waiting_human", "done", "failed"

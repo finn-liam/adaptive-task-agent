@@ -10,7 +10,7 @@ next(t for t in plan if t.id == d) 找不到 id 抛 StopIteration，穿透进 la
 - executor 名册检查（治崩）：悬空依赖按"未就绪"跳过并记失败回执，绝不再抛异常。
 """
 
-import app.agent.replanner as replanner
+from app.agent import replanner
 from app.agent.executor import executor_node
 from app.models.schemas import EvaluationResult, Plan, Task
 
