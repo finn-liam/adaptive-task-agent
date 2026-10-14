@@ -98,7 +98,7 @@ def main():
             done += 1
             print(f"  [{done}/{len(cases)}] {case['id']} 完成")
 
-    print(f"✅ 批次结束：{done} 条 trace → {outdir}")
+    print(f"批次结束：{done} 条 trace → {outdir}")
 
 
 if __name__ == "__main__":

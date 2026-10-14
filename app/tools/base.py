@@ -72,7 +72,7 @@ def run_tool(name: str, args: dict) -> Observation:
             error = f"{type(e).__name__}: {e}"      # 存字符串进回执（Observation.error 是 str）
             if attempt < 2 and _is_retryable(e):
                 wait = 2 ** attempt                 # 指数退避：第1次失败等1s，第2次等2s
-                print(f"    ⏳ 第{attempt + 1}次失败（{type(e).__name__}），{wait}s 后重试…")
+                print(f"    第{attempt + 1}次失败（{type(e).__name__}），{wait}s 后重试…")
                 time.sleep(wait)
             else:
                 break                               # 不可重试的错误，或重试用尽——放弃

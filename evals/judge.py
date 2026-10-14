@@ -107,10 +107,10 @@ def main():
             (outdir / f"{verdict['case_id']}.json").write_text(
                 json.dumps(verdict, ensure_ascii=False, indent=1), encoding="utf-8")
             done += 1
-            mark = "✅" if verdict["success"] else "❌"
+            mark = "√" if verdict["success"] else "X"
             print(f"  [{done}/{len(traces)}] {mark} {verdict['case_id']} 覆盖率 {verdict['coverage']}")
 
-    print(f"✅ 判卷结束：{done} 份判定 → {outdir}")
+    print(f"判卷结束：{done} 份判定 → {outdir}")
 
 
 if __name__ == "__main__":

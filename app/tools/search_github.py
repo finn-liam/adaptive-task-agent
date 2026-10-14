@@ -45,7 +45,7 @@ def search_github(query: str = "", action: str = "search", repo: str = "") -> st
         if not items:
             return "没有搜到匹配的仓库"
         lines = [
-            f"- {it['full_name']} ⭐{it['stargazers_count']}｜{(it.get('description') or '')[:100]}"
+            f"- {it['full_name']} star {it['stargazers_count']}｜{(it.get('description') or '')[:100]}"
             for it in items
         ]
         return "GitHub 搜索结果：\n" + "\n".join(lines)

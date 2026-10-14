@@ -103,7 +103,7 @@ def score():
     print(f"\n===== 盲测校准报告（{datetime.now().astimezone().strftime('%Y-%m-%d')}）=====")
     print(f"样本：{len(rows)} 份（种子 2026，judge 判定隐藏）")
     print(f"人机一致率：{len(agree)}/{len(rows)} = {rate:.0%}")
-    print(f"门槛 80%：{'✅ 达标，judge 可信' if rate >= 0.8 else '❌ 未达标，需修 judge 后重新校准'}")
+    print(f"门槛 80%：{'达标，judge 可信' if rate >= 0.8 else '未达标，需修 judge 后重新校准'}")
     if dis:
         print("\n分歧清单（人工 vs judge）：")
         for r in dis:

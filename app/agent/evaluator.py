@@ -32,7 +32,7 @@ def evaluator_node(state: AgentState) -> dict:
     result: EvaluationResult = make_llm().with_structured_output(
         EvaluationResult,method="function_calling").invoke(prompt)
     mark = "√√√ 通过" if result.success else ("循环 建议重规划" if result.need_replan else "X 失败跳过")
-    print(f"🔍 [{task.id}]{mark} | {result.reason}")
+    print(f"[{task.id}] {mark} | {result.reason}")
     return {"evaluation":result}
 
 

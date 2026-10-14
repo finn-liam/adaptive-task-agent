@@ -25,7 +25,7 @@ def human_gate_node(state: AgentState) -> dict:
             task_id=task.id, tool=task.tool or "", success=False,
             summary="", error="用户拒绝了本次高危操作",
         )
-    print("✅ 审批通过，已执行" if approved else "🚫 审批拒绝，任务标记失败",
+    print("审批通过，已执行" if approved else "审批拒绝，任务标记失败",
           f"：{obs.error or obs.summary[:60]}")
 
     # W4-3 教训：checkpoint 每步之间有序列化边界，pending_approval 和 plan

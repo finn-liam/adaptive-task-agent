@@ -19,7 +19,7 @@ def _eval_node(node):
     """递归校验并计算：只认白名单内的语法节点，见到陌生脸直接报警"""
     # 数字常量（2、3.14）→ 直接放行，返回数值
     if isinstance(node, ast.Constant) and isinstance(node.value, (int, float)):
-        return node.value                           # 数字常量 ✅
+        return node.value                           # 数字常量，放行
     # 二元运算（a + b、a * b）先查白名单type(node.op),拿到对应函数->递归的先算左边node.left，再算右边node.right，然后合并
     if isinstance(node, ast.BinOp) and type(node.op) in _ALLOWED_OPS:
         return _ALLOWED_OPS[type(node.op)](_eval_node(node.left), _eval_node(node.right))

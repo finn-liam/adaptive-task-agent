@@ -18,7 +18,7 @@ def test_search_formats_results():
         )
         out = search_github(query="随便", action="search")
     assert "a/b" in out
-    assert "⭐12" in out
+    assert "star 12" in out
 
 
 def test_readme_decodes_base64():
